@@ -1,0 +1,125 @@
+nav {
+  width: 100%;
+  position: fixed;
+  top: 0%;
+  background: #464b51;
+  padding-left: 8%;
+  height: 5%;
+  z-index: 1;
+}
+
+.navbar_element {
+  display: inline;
+  padding-left: 1%;
+  padding-right: 1%;
+}
+
+.navbar_table {
+  top: 10%;
+}
+
+html, body {
+  height: 100%;
+  margin: 0%;
+}
+
+body {
+  background:#000000;
+}
+
+table {
+  position: relative;
+  //overflow: scroll;
+}
+
+//table + .sidebar {
+//  width: 100%;
+//}
+
+td {
+  //width: 100%;
+}
+
+tr {
+  //width: 100%;
+  height: 4%;
+  max-height: 4%;
+}
+
+a {
+  //width: 100%;
+  font-size: 3vh;
+  position: relative;
+  //height: 100%;
+}
+
+.filter_control {
+  position: inherit;
+  top: 5%;
+}
+
+.sidebar {
+  width: 8%;
+  max-width: 8%;
+  background: #595959;
+
+  height: 100%;
+  position: fixed;
+  z-index: 1;
+  top: 5%;
+  left: 0%;
+}
+
+.sidebar_element {
+  display: block;
+  color: #000000;
+}
+
+.sidebar_element_child {
+  padding-left: 10%;
+}
+
+.clickable:hover {
+  color: #ffffff;
+}
+
+.main {
+  top: 5%;
+  color: #ffffff;
+  left: 4%;
+  //right: 100%;
+  position: absolute;
+  width: 96%;
+}
+
+table {
+  top: 10%;
+  //display: block;
+}
+
+.row_portion {
+  //display: inline;
+  //padding-left: 1%;
+  //width: 100%;
+  border: red;
+  border-style: solid;
+  background-color: blue;
+  //position: relative;
+  width: 10%;
+}
+
+.details_table {
+  //border-spacing: 5%;
+  //border-collapse: collapse;
+  overflow: scroll;
+  background-color: pink;
+  //width: 92%;
+}
+
+.details_row {
+  height: 100%;
+  border: red;
+  border-style: solid;
+  position: relative;
+  //width: 100%;
+}
