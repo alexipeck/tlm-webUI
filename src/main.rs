@@ -1,25 +1,47 @@
 use yew::prelude::*;
-use yew::{classes, html};
 
-#[derive(Debug)]
-pub struct Model;
+enum Msg {
+    AddOne,
+}
+
+struct Model {
+    // `ComponentLink` is like a reference to a component.
+    // It can be used to send messages to the component
+    link: ComponentLink<Self>,
+    value: i64,
+}
+
 impl Component for Model {
-    type Message = ();
+    type Message = Msg;
     type Properties = ();
 
-    fn create(_props: Self::Properties, _link: ComponentLink<Self>) -> Self {
-        Self
+    fn create(_props: Self::Properties, link: ComponentLink<Self>) -> Self {
+        Self {
+            link,
+            value: 0,
+        }
     }
 
-    fn update(&mut self, _msg: Self::Message) -> ShouldRender {
-        unimplemented!()
+    fn update(&mut self, msg: Self::Message) -> ShouldRender {
+        match msg {
+            Msg::AddOne => {
+                self.value += 1;
+                // the value has changed so we need to
+                // re-render for it to appear on the page
+                true
+            }
+        }
     }
 
     fn change(&mut self, _props: Self::Properties) -> ShouldRender {
+        // Should only return "true" if new properties are different to
+        // previously received properties.
+        // This component has no properties so we will always return "false".
         false
     }
 
     fn view(&self) -> Html {
+
         html! {
             <>
                 <nav>
@@ -31,6 +53,7 @@ impl Component for Model {
                             <td class={classes!("clickable", "navbar_element", "navbar_table")}><a>{ "Main" }</a></td>       //Details view of all imported with relevant controls in the control bar.
                             <td class={classes!("clickable", "navbar_element", "navbar_table")}><a>{ "Organise" }</a></td>   //Details view of all imported with relevant controls in the control bar. 
                             <td class={classes!("clickable", "navbar_element", "navbar_table")}><a>{ "Process" }</a></td>
+                            <button class={classes!("clickable", "navbar_element", "navbar_table", "navbar_button")} onclick=self.link.callback(|_| Msg::AddOne)>{ self.value }</button>
                         </tr>
                     </table>
                 </nav>
@@ -61,7 +84,6 @@ impl Component for Model {
                                     <th class={classes!("row_portion")}><a>{ "" }</a></th>
                                     <th class={classes!("row_portion")}><a>{ "" }</a></th>
                                     <th class={classes!("row_portion")}><a>{ "" }</a></th>
-                                    //<th class={classes!("row_portion")}><a>{ "" }</a></th>
                                 </tr></div>
 
                                 <div class={classes!("details_row")}><tr>
@@ -69,84 +91,72 @@ impl Component for Model {
                                     <td class={classes!("row_portion")}><a>{ "Some test element and another little bit longer" }</a></td>
                                     <td class={classes!("row_portion")}><a>{ "Some test element and another little bit longer" }</a></td>
                                     <td class={classes!("row_portion")}><a>{ "Some test element and another little bit longer" }</a></td>
-                                    //<td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                 </tr></div>
                                 <div class={classes!("details_row")}><tr>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
-                                    //<td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                 </tr></div>
                                 <div class={classes!("details_row")}><tr>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
-                                    //<td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                 </tr></div>
                                 <div class={classes!("details_row")}><tr>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
-                                    //<td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                 </tr></div>
                                 <div class={classes!("details_row")}><tr>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
-                                    //<td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                 </tr></div>
                                 <div class={classes!("details_row")}><tr>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
-                                    //<td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                 </tr></div>
                                 <div class={classes!("details_row")}><tr>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
-                                    //<td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                 </tr></div>
                                 <div class={classes!("details_row")}><tr>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
-                                    //<td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                 </tr></div>
                                 <div class={classes!("details_row")}><tr>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
-                                    //<td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                 </tr></div>
                                 <div class={classes!("details_row")}><tr>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
-                                    //<td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                 </tr></div>
                                 <div class={classes!("details_row")}><tr>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
-                                    //<td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                 </tr></div>
                                 <div class={classes!("details_row")}><tr>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
-                                    //<td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                 </tr></div>
                                 <div class={classes!("details_row")}><tr>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
