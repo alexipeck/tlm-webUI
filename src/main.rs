@@ -53,7 +53,7 @@ impl Component for Model {
                             <td class={classes!("clickable", "navbar_element", "navbar_table")}><a>{ "Main" }</a></td>       //Details view of all imported with relevant controls in the control bar.
                             <td class={classes!("clickable", "navbar_element", "navbar_table")}><a>{ "Organise" }</a></td>   //Details view of all imported with relevant controls in the control bar. 
                             <td class={classes!("clickable", "navbar_element", "navbar_table")}><a>{ "Process" }</a></td>
-                            <button class={classes!("clickable", "navbar_element", "navbar_table", "navbar_button")} onclick=self.link.callback(|_| Msg::AddOne)>{ self.value }</button>
+                            <td class={classes!("clickable", "navbar_element", "navbar_table")}><a class={classes!("navbar_button")} onclick=self.link.callback(|_| Msg::AddOne)>{ self.value }</a></td>
                         </tr>
                     </table>
                 </nav>
