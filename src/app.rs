@@ -1,21 +1,21 @@
-extern crate failure;
+//extern crate failure;
 use yew::prelude::*;
-use failure::Error;
+//use failure::Error;
 use yew::{classes, html};
-use yew::format::Json;
-use yew::services::console::ConsoleService;
-use yew::services::websocket::{WebSocketService, WebSocketStatus, WebSocketTask};
-//use crate::components::button::Button;
+//use yew::format::Json;
+//use yew::services::console::ConsoleService;
+//use yew::services::websocket::{WebSocketService, WebSocketStatus, WebSocketTask};
+use crate::components::button::Button;
 
 pub enum Msg {
     AddOne,
     RemoveOne,
     //Connect,                         // connect to websocket server
-	Disconnected,                    // disconnected from server
-	Ignore,                          // ignore this message
-	TextInput(String),               // text was input in the input box
-	SendText,                        // send our text to server
-	Received(Result<String, Error>), // data received from server
+	//Disconnected,                    // disconnected from server
+	//Ignore,                          // ignore this message
+	//TextInput(String),               // text was input in the input box
+	//SendText,                        // send our text to server
+	//Received(Result<String, Error>), // data received from server
 }
 
 #[derive(Debug)]
@@ -23,10 +23,10 @@ pub struct App {
     link: ComponentLink<Self>,
     counter: usize,
     //console: ConsoleService,
-	ws: Option<WebSocketTask>,
+	//ws: Option<WebSocketTask>,
 	//wss: WebSocketService,
-	text: String,                    // text in our input box
-	server_data: String,             // data received from the server
+	//text: String,                    // text in our input box
+	//server_data: String,             // data received from the server
 }
 impl Component for App {
     type Message = Msg;
@@ -37,10 +37,10 @@ impl Component for App {
             link,
             counter: 0,
             //console: ConsoleService::new(),//default
-			ws: None,
+			//ws: None,
 			//wss: WebSocketService::connect("ws://localhost:8888"),
-			text: String::new(),
-			server_data: String::new(),
+			//text: String::new(),
+			//server_data: String::new(),
         }
     }
 
@@ -69,7 +69,7 @@ impl Component for App {
 					self.ws = Some(task);
 				}
 				return true;
-			} */
+			}
 			Msg::Disconnected => {
 				self.ws = None;
 				return true;
@@ -100,7 +100,7 @@ impl Component for App {
 			Msg::Received(Err(s)) => {
 				self.server_data.push_str(&format!("Error when reading data from server: {}\n", &s.to_string()));
 				return true;
-			}
+			} */
         }
         true
     }
@@ -121,8 +121,8 @@ impl Component for App {
                             <td class={classes!("clickable", "navbar_element", "navbar_table")}><a>{ "Main" }</a></td>       //Details view of all imported with relevant controls in the control bar.
                             <td class={classes!("clickable", "navbar_element", "navbar_table")}><a>{ "Organise" }</a></td>   //Details view of all imported with relevant controls in the control bar. 
                             <td class={classes!("clickable", "navbar_element", "navbar_table")}><a>{ "Process" }</a></td>
-                            //<Button onsignal=self.link.callback(|_| Msg::RemoveOne) title="-1" />
-                            //<Button onsignal=self.link.callback(|_| Msg::AddOne) title="+1" />  
+                            //<Button onsignal=self.link.callback(|_| Msg::RemoveOne) title="-1 Down" />// class={classes!("clickable", "navbar_element", "navbar_table")}
+                            //<Button onsignal=self.link.callback(|_| Msg::AddOne) title="+1 Up" />// class={classes!("clickable", "navbar_element", "navbar_table")}
                         </tr>
                     </table>
                 </nav>
