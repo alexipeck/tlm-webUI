@@ -1,7 +1,14 @@
 use yew::prelude::*;
+use websocket::ClientBuilder;
+use websocket::message::Message;
+use websocket::url::Url;
+//use tokio::io::{AsyncReadExt, AsyncWriteExt};
+//use tokio_tungstenite::{connect_async, tungstenite::protocol::Message};
+//use futures_util::{future, pin_mut, StreamExt};
 
 enum Msg {
     AddOne,
+    Import,
 }
 
 struct Model {
@@ -30,6 +37,18 @@ impl Component for Model {
                 // re-render for it to appear on the page
                 true
             }
+            Msg::Import => {
+                
+                let client = ClientBuilder::new("ws://localhost:8888")
+                    .unwrap()
+                    .connect_insecure()
+                    .unwrap();
+                
+                let message = Message::text("import");
+                client.send_message(&message).unwrap();
+
+                false
+            }
         }
     }
 
@@ -54,6 +73,7 @@ impl Component for Model {
                             <td class={classes!("clickable", "navbar_element", "navbar_table")}><a>{ "Organise" }</a></td>   //Details view of all imported with relevant controls in the control bar. 
                             <td class={classes!("clickable", "navbar_element", "navbar_table")}><a>{ "Process" }</a></td>
                             <td class={classes!("clickable", "navbar_element", "navbar_table")}><a class={classes!("navbar_button")} onclick=self.link.callback(|_| Msg::AddOne)>{ self.value }</a></td>
+                            <td class={classes!("clickable", "navbar_element", "navbar_table")}><a class={classes!("navbar_button")} onclick=self.link.callback(|_| Msg::Import)>{ "Import" }</a></td>
                         </tr>
                     </table>
                 </nav>
