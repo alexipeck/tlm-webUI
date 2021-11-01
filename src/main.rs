@@ -1,7 +1,7 @@
 use yew::prelude::*;
 use websocket::ClientBuilder;
 use websocket::message::Message;
-use websocket::url::Url;
+//use websocket::url::Url;
 //use tokio::io::{AsyncReadExt, AsyncWriteExt};
 //use tokio_tungstenite::{connect_async, tungstenite::protocol::Message};
 //use futures_util::{future, pin_mut, StreamExt};
@@ -39,7 +39,7 @@ impl Component for Model {
             }
             Msg::Import => {
                 
-                let client = ClientBuilder::new("ws://localhost:8888")
+                let mut client = ClientBuilder::new("ws://localhost:8888")
                     .unwrap()
                     .connect_insecure()
                     .unwrap();
