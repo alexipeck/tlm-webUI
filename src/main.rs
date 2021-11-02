@@ -1,7 +1,8 @@
 use yew::prelude::*;
+use yew::services::{Task, WebSocketService};
 //use websocket::ClientBuilder;
 //use websocket::message::Message;
-use yew::services::websocket::WebSocketTask;
+use yew::services::websocket::{WebSocketTask, WebSocketStatus};
 //use yew::callback::Callback;
 //use yew::services::ConsoleService;
 //use console_error_panic_hook;
@@ -19,7 +20,31 @@ enum Msg {
     Import,
     Process,
     Hash,
-    Blank,
+    Ignore,
+}
+
+fn wait_until_web_socket_is_open(structure: &mut Model) {
+    loop {
+        match structure.web_socket_task.as_mut() {
+            Some(t) => {
+                while !t.is_active() {
+                    //Do nothing but take time
+                }
+                break;
+            }
+            None => {
+                match yew::services::websocket::WebSocketService::connect_text::<Text>("ws://localhost:8888", structure.link.callback(|_| Msg::Ignore), structure.link.callback(|_| Msg::Ignore)) {
+                    Ok(t) => {
+                        structure.web_socket_task = Some(t);
+                        continue;
+                    },
+                    Err(_) => {
+                        
+                    }
+                }
+            }
+        }
+    }
 }
 
 struct Model {
@@ -31,18 +56,6 @@ struct Model {
 }
 
 impl Model {
-    fn make_web_socket(&mut self) {
-        let ws_result = yew::services::websocket::WebSocketService::connect_text::<Text>("ws://localhost:8888", self.link.callback(|_| Msg::Blank), self.link.callback(|_| Msg::Blank));
-        match ws_result {
-            Ok(_) => {
-                self.web_socket_task = Some(ws_result.unwrap());
-            },
-            Err(E) => {
-                
-            }
-        }
-    }
-
     fn send_message(&mut self, message: &str) {
         let tries: usize = 3;
         for _ in 0..tries {
@@ -52,11 +65,10 @@ impl Model {
                     break;
                 },
                 None => {
-                    self.make_web_socket();
+                    wait_until_web_socket_is_open(self);
                 }
             }
         }
-        
     }
 }
 
@@ -66,12 +78,22 @@ impl Component for Model {
 
     fn create(_props: Self::Properties, link: ComponentLink<Self>) -> Self {
         panic::set_hook(Box::new(console_error_panic_hook::hook));
-        Self {
+        let mut temp = Self {
             link,
             value: 0,
             web_socket_task: None,
+        };
+        match yew::services::websocket::WebSocketService::connect_text::<Text>("ws://localhost:8888", temp.link.callback(|_| Msg::Ignore), temp.link.callback(|_| Msg::Ignore)) {
+            Ok(t) => {
+                temp.web_socket_task = Some(t);
+                wait_until_web_socket_is_open(&mut temp);
+            },
+            Err(_) => {
+                
+            }
         }
-    } 
+        temp
+    }
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
         match msg {
@@ -99,7 +121,7 @@ impl Component for Model {
 
                 true
             }
-            Msg::Blank => {
+            Msg::Ignore => {
                 //Does nothing
                 false
             }
@@ -114,7 +136,6 @@ impl Component for Model {
     }
 
     fn view(&self) -> Html {
-
         html! {
             <>
                 <nav>
