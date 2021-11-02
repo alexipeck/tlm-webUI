@@ -1,11 +1,14 @@
 use yew::prelude::*;
 //use websocket::ClientBuilder;
 //use websocket::message::Message;
-use yew::services::websocket;
-use yew::callback::Callback;
-use yew::services::ConsoleService;
+use yew::services::websocket::{self, WebSocketTask};
+//use yew::callback::Callback;
+//use yew::services::ConsoleService;
 use console_error_panic_hook;
 use std::panic;
+use yew::format::Text;
+use anyhow::Error;
+
 //use websocket::url::Url;
 //use tokio::io::{AsyncReadExt, AsyncWriteExt};
 //use tokio_tungstenite::{connect_async, tungstenite::protocol::Message};
@@ -14,6 +17,7 @@ use std::panic;
 enum Msg {
     AddOne,
     Import,
+    Blank,
 }
 
 struct Model {
@@ -21,6 +25,37 @@ struct Model {
     // It can be used to send messages to the component
     link: ComponentLink<Self>,
     value: i64,
+    web_socket_task: Option<WebSocketTask>,
+}
+
+impl Model {
+    fn make_web_socket(&mut self) {
+        let ws_result = yew::services::websocket::WebSocketService::connect_text::<Text>("ws://localhost:8888", self.link.callback(|_| Msg::Blank), self.link.callback(|_| Msg::Blank));
+        match ws_result {
+            Ok(_) => {
+                self.web_socket_task = Some(ws_result.unwrap());
+            },
+            Err(E) => {
+                
+            }
+        }
+    }
+
+    fn send_message(&mut self, message: &str) {
+        let tries: usize = 3;
+        for _ in 0..tries {
+            match self.web_socket_task.as_mut() {
+                Some(t) => {
+                    t.send(Ok(String::from(message)));
+                    break;
+                },
+                None => {
+                    self.make_web_socket();
+                }
+            }
+        }
+        
+    }
 }
 
 impl Component for Model {
@@ -32,8 +67,9 @@ impl Component for Model {
         Self {
             link,
             value: 0,
+            web_socket_task: None,
         }
-    }
+    } 
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
         match msg {
@@ -44,25 +80,14 @@ impl Component for Model {
                 true
             }
             Msg::Import => {
-                let t = yew::services::websocket::WebSocketService::connect_text("ws://localhost:8888", , notification);
+                self.send_message("import");
                 self.value += 1;
 
-
-                //let t = websocket_client::Socket::new(String::from("ws://localhost:8888"));
-                //ConsoleService::info(format!("Socket Error: {}", t.).as_ref());
-                //let mut t = t.unwrap();
-                //let f = t.send(String::from("import"));
-
-
-                //let mut client = ClientBuilder::new("ws://localhost:8888")
-                //    .unwrap()
-                //    .connect_insecure()
-                //    .unwrap();
-                //
-                //let message = Message::text("import");
-                //client.send_message(&message).unwrap();
-
                 true
+            }
+            Msg::Blank => {
+                //Does nothing
+                false
             }
         }
     }
