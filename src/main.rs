@@ -1,13 +1,13 @@
 use yew::prelude::*;
 //use websocket::ClientBuilder;
 //use websocket::message::Message;
-use yew::services::websocket::{self, WebSocketTask};
+use yew::services::websocket::WebSocketTask;
 //use yew::callback::Callback;
 //use yew::services::ConsoleService;
-use console_error_panic_hook;
+//use console_error_panic_hook;
 use std::panic;
 use yew::format::Text;
-use anyhow::Error;
+//use anyhow::Error;
 
 //use websocket::url::Url;
 //use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -17,6 +17,8 @@ use anyhow::Error;
 enum Msg {
     AddOne,
     Import,
+    Process,
+    Hash,
     Blank,
 }
 
@@ -85,6 +87,18 @@ impl Component for Model {
 
                 true
             }
+            Msg::Process => {
+                self.send_message("process");
+                self.value += 1;
+
+                true
+            }
+            Msg::Hash => {
+                self.send_message("hash");
+                self.value += 1;
+
+                true
+            }
             Msg::Blank => {
                 //Does nothing
                 false
@@ -114,6 +128,8 @@ impl Component for Model {
                             <td class={classes!("clickable", "navbar_element", "navbar_table")}><a>{ "Process" }</a></td>
                             <td class={classes!("clickable", "navbar_element", "navbar_table")}><a class={classes!("navbar_button")} onclick=self.link.callback(|_| Msg::AddOne)>{ self.value }</a></td>
                             <td class={classes!("clickable", "navbar_element", "navbar_table")}><a class={classes!("navbar_button")} onclick=self.link.callback(|_| Msg::Import)>{ "Import" }</a></td>
+                            <td class={classes!("clickable", "navbar_element", "navbar_table")}><a class={classes!("navbar_button")} onclick=self.link.callback(|_| Msg::Process)>{ "Process" }</a></td>
+                            <td class={classes!("clickable", "navbar_element", "navbar_table")}><a class={classes!("navbar_button")} onclick=self.link.callback(|_| Msg::Hash)>{ "Hash" }</a></td>
                         </tr>
                     </table>
                 </nav>
