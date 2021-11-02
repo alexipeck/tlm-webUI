@@ -1,6 +1,11 @@
 use yew::prelude::*;
-use websocket::ClientBuilder;
-use websocket::message::Message;
+//use websocket::ClientBuilder;
+//use websocket::message::Message;
+use yew::services::websocket;
+use yew::callback::Callback;
+use yew::services::ConsoleService;
+use console_error_panic_hook;
+use std::panic;
 //use websocket::url::Url;
 //use tokio::io::{AsyncReadExt, AsyncWriteExt};
 //use tokio_tungstenite::{connect_async, tungstenite::protocol::Message};
@@ -23,6 +28,7 @@ impl Component for Model {
     type Properties = ();
 
     fn create(_props: Self::Properties, link: ComponentLink<Self>) -> Self {
+        panic::set_hook(Box::new(console_error_panic_hook::hook));
         Self {
             link,
             value: 0,
@@ -38,16 +44,25 @@ impl Component for Model {
                 true
             }
             Msg::Import => {
-                
-                let mut client = ClientBuilder::new("ws://localhost:8888")
-                    .unwrap()
-                    .connect_insecure()
-                    .unwrap();
-                
-                let message = Message::text("import");
-                client.send_message(&message).unwrap();
+                let t = yew::services::websocket::WebSocketService::connect_text("ws://localhost:8888", , notification);
+                self.value += 1;
 
-                false
+
+                //let t = websocket_client::Socket::new(String::from("ws://localhost:8888"));
+                //ConsoleService::info(format!("Socket Error: {}", t.).as_ref());
+                //let mut t = t.unwrap();
+                //let f = t.send(String::from("import"));
+
+
+                //let mut client = ClientBuilder::new("ws://localhost:8888")
+                //    .unwrap()
+                //    .connect_insecure()
+                //    .unwrap();
+                //
+                //let message = Message::text("import");
+                //client.send_message(&message).unwrap();
+
+                true
             }
         }
     }
