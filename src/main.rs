@@ -1,21 +1,137 @@
 use yew::prelude::*;
-use yew::{classes, html};
+use yew::services::{Task, WebSocketService};
+//use websocket::ClientBuilder;
+//use websocket::message::Message;
+use yew::services::websocket::{WebSocketTask, WebSocketStatus};
+//use yew::callback::Callback;
+//use yew::services::ConsoleService;
+//use console_error_panic_hook;
+use std::panic;
+use yew::format::Text;
+//use anyhow::Error;
 
-#[derive(Debug)]
-pub struct Model;
+//use websocket::url::Url;
+//use tokio::io::{AsyncReadExt, AsyncWriteExt};
+//use tokio_tungstenite::{connect_async, tungstenite::protocol::Message};
+//use futures_util::{future, pin_mut, StreamExt};
+
+enum Msg {
+    AddOne,
+    Import,
+    Process,
+    Hash,
+    Ignore,
+}
+
+fn wait_until_web_socket_is_open(structure: &mut Model) {
+    loop {
+        match structure.web_socket_task.as_mut() {
+            Some(t) => {
+                while !t.is_active() {
+                    //Do nothing but take time
+                }
+                break;
+            }
+            None => {
+                match yew::services::websocket::WebSocketService::connect_text::<Text>("ws://localhost:8888", structure.link.callback(|_| Msg::Ignore), structure.link.callback(|_| Msg::Ignore)) {
+                    Ok(t) => {
+                        structure.web_socket_task = Some(t);
+                        continue;
+                    },
+                    Err(_) => {
+                        
+                    }
+                }
+            }
+        }
+    }
+}
+
+struct Model {
+    // `ComponentLink` is like a reference to a component.
+    // It can be used to send messages to the component
+    link: ComponentLink<Self>,
+    value: i64,
+    web_socket_task: Option<WebSocketTask>,
+}
+
+impl Model {
+    fn send_message(&mut self, message: &str) {
+        let tries: usize = 3;
+        for _ in 0..tries {
+            match self.web_socket_task.as_mut() {
+                Some(t) => {
+                    t.send(Ok(String::from(message)));
+                    break;
+                },
+                None => {
+                    wait_until_web_socket_is_open(self);
+                }
+            }
+        }
+    }
+}
+
 impl Component for Model {
-    type Message = ();
+    type Message = Msg;
     type Properties = ();
 
-    fn create(_props: Self::Properties, _link: ComponentLink<Self>) -> Self {
-        Self
+    fn create(_props: Self::Properties, link: ComponentLink<Self>) -> Self {
+        panic::set_hook(Box::new(console_error_panic_hook::hook));
+        let mut temp = Self {
+            link,
+            value: 0,
+            web_socket_task: None,
+        };
+        match yew::services::websocket::WebSocketService::connect_text::<Text>("ws://localhost:8888", temp.link.callback(|_| Msg::Ignore), temp.link.callback(|_| Msg::Ignore)) {
+            Ok(t) => {
+                temp.web_socket_task = Some(t);
+                wait_until_web_socket_is_open(&mut temp);
+            },
+            Err(_) => {
+                
+            }
+        }
+        temp
     }
 
-    fn update(&mut self, _msg: Self::Message) -> ShouldRender {
-        unimplemented!()
+    fn update(&mut self, msg: Self::Message) -> ShouldRender {
+        match msg {
+            Msg::AddOne => {
+                self.value += 1;
+                // the value has changed so we need to
+                // re-render for it to appear on the page
+                true
+            }
+            Msg::Import => {
+                self.send_message("import");
+                self.value += 1;
+
+                true
+            }
+            Msg::Process => {
+                self.send_message("process");
+                self.value += 1;
+
+                true
+            }
+            Msg::Hash => {
+                self.send_message("hash");
+                self.value += 1;
+
+                true
+            }
+            Msg::Ignore => {
+                //Does nothing
+                false
+            }
+        }
     }
 
     fn change(&mut self, _props: Self::Properties) -> ShouldRender {
+        // Should only return "true" if new properties are different to
+        // previously received properties.
+        // This component has no properties so we will always return "false".
         false
     }
 
@@ -31,6 +147,10 @@ impl Component for Model {
                             <td class={classes!("clickable", "navbar_element", "navbar_table")}><a>{ "Main" }</a></td>       //Details view of all imported with relevant controls in the control bar.
                             <td class={classes!("clickable", "navbar_element", "navbar_table")}><a>{ "Organise" }</a></td>   //Details view of all imported with relevant controls in the control bar. 
                             <td class={classes!("clickable", "navbar_element", "navbar_table")}><a>{ "Process" }</a></td>
+                            <td class={classes!("clickable", "navbar_element", "navbar_table")}><a class={classes!("navbar_button")} onclick=self.link.callback(|_| Msg::AddOne)>{ self.value }</a></td>
+                            <td class={classes!("clickable", "navbar_element", "navbar_table")}><a class={classes!("navbar_button")} onclick=self.link.callback(|_| Msg::Import)>{ "Import" }</a></td>
+                            <td class={classes!("clickable", "navbar_element", "navbar_table")}><a class={classes!("navbar_button")} onclick=self.link.callback(|_| Msg::Process)>{ "Process" }</a></td>
+                            <td class={classes!("clickable", "navbar_element", "navbar_table")}><a class={classes!("navbar_button")} onclick=self.link.callback(|_| Msg::Hash)>{ "Hash" }</a></td>
                         </tr>
                     </table>
                 </nav>
@@ -61,7 +181,6 @@ impl Component for Model {
                                     <th class={classes!("row_portion")}><a>{ "" }</a></th>
                                     <th class={classes!("row_portion")}><a>{ "" }</a></th>
                                     <th class={classes!("row_portion")}><a>{ "" }</a></th>
-                                    //<th class={classes!("row_portion")}><a>{ "" }</a></th>
                                 </tr></div>
 
                                 <div class={classes!("details_row")}><tr>
@@ -69,84 +188,72 @@ impl Component for Model {
                                     <td class={classes!("row_portion")}><a>{ "Some test element and another little bit longer" }</a></td>
                                     <td class={classes!("row_portion")}><a>{ "Some test element and another little bit longer" }</a></td>
                                     <td class={classes!("row_portion")}><a>{ "Some test element and another little bit longer" }</a></td>
-                                    //<td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                 </tr></div>
                                 <div class={classes!("details_row")}><tr>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
-                                    //<td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                 </tr></div>
                                 <div class={classes!("details_row")}><tr>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
-                                    //<td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                 </tr></div>
                                 <div class={classes!("details_row")}><tr>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
-                                    //<td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                 </tr></div>
                                 <div class={classes!("details_row")}><tr>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
-                                    //<td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                 </tr></div>
                                 <div class={classes!("details_row")}><tr>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
-                                    //<td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                 </tr></div>
                                 <div class={classes!("details_row")}><tr>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
-                                    //<td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                 </tr></div>
                                 <div class={classes!("details_row")}><tr>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
-                                    //<td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                 </tr></div>
                                 <div class={classes!("details_row")}><tr>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
-                                    //<td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                 </tr></div>
                                 <div class={classes!("details_row")}><tr>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
-                                    //<td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                 </tr></div>
                                 <div class={classes!("details_row")}><tr>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
-                                    //<td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                 </tr></div>
                                 <div class={classes!("details_row")}><tr>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
-                                    //<td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                 </tr></div>
                                 <div class={classes!("details_row")}><tr>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>

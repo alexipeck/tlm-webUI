@@ -1,5 +1,5 @@
 [package]
-name = "trunk"
+name = "tlm_webui"
 version = "0.1.0"
 edition = "2018"
 description = "Yew WebUI for TLM"
@@ -12,3 +12,5 @@ categories = ["gui", "wasm", "web-programming"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]
 yew = "0.18"
+console_error_panic_hook = "0.1.7"
+anyhow = "1.0.44"
