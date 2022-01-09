@@ -1,34 +1,38 @@
-use yew::prelude::*;
+use serde::{Deserialize, Serialize};
+use tlm_webui::{MessageSource, WebUIMessage, RequestType};
+use yew::binary_format;
+use yew::{prelude::*, format::bincode};
 use yew::services::Task;
 use yew::services::websocket::WebSocketTask;
 use std::panic;
-use yew::format::Text;
+use yew::format::{Text, Bincode, Json};
 
 enum Msg {
     AddOne,
     Import,
     Process,
     Hash,
+    RequestFileVersions,
     Ignore,
 }
 
 fn wait_until_web_socket_is_open(structure: &mut Model) {
     loop {
         match structure.web_socket_task.as_mut() {
-            Some(t) => {
-                while !t.is_active() {
+            Some(web_socket_task) => {
+                while !web_socket_task.is_active() {
                     //Do nothing but take time
                 }
                 break;
             }
             None => {
                 match yew::services::websocket::WebSocketService::connect_text::<Text>("ws://localhost:8888", structure.link.callback(|_| Msg::Ignore), structure.link.callback(|_| Msg::Ignore)) {
-                    Ok(t) => {
-                        structure.web_socket_task = Some(t);
+                    Ok(web_socket_task) => {
+                        structure.web_socket_task = Some(web_socket_task);
                         continue;
                     },
-                    Err(_) => {
-                        
+                    Err(err) => {
+                        println!("Failed to connect websocket, error: {}", err);
                     }
                 }
             }
@@ -47,13 +51,37 @@ impl Model {
         let tries: usize = 3;
         for _ in 0..tries {
             match self.web_socket_task.as_mut() {
-                Some(t) => {
-                    t.send(Ok(String::from(message)));
+                Some(web_socket_task) => {
+                    web_socket_task.send(Ok(String::from(message)));
                     break;
                 },
                 None => {
                     wait_until_web_socket_is_open(self);
-                }
+                },
+            }
+        }
+    }
+
+    fn send_request(&mut self, request: RequestType) {
+        let t = WebUIMessage::Request(request);
+        let message_source_json = MessageSource::WebUI(t).to_json();
+        let tries: usize = 3;
+        for _ in 0..tries {
+            match self.web_socket_task.as_mut() {
+                Some(web_socket_task) => {
+                    web_socket_task.send(Ok(message_source_json));
+                    //let request_serialised = Bincode(&request);
+                    /* let serialised = bincode::serialize::<RequestType>(&self).unwrap_or_else(|err| {
+                        println!("Failed to deserialise message: {}", err);
+                        panic!();
+                    }); */
+                    /* let t = Bincode::from(request); */
+                    //web_socket_task.send_binary(request_serialised);
+                    break;
+                },
+                None => {
+                    wait_until_web_socket_is_open(self);
+                },
             }
         }
     }
@@ -65,21 +93,21 @@ impl Component for Model {
 
     fn create(_props: Self::Properties, link: ComponentLink<Self>) -> Self {
         panic::set_hook(Box::new(console_error_panic_hook::hook));
-        let mut temp = Self {
+        let mut model = Self {
             link,
             value: 0,
             web_socket_task: None,
         };
-        match yew::services::websocket::WebSocketService::connect_text::<Text>("ws://localhost:8888", temp.link.callback(|_| Msg::Ignore), temp.link.callback(|_| Msg::Ignore)) {
-            Ok(t) => {
-                temp.web_socket_task = Some(t);
-                wait_until_web_socket_is_open(&mut temp);
+        match yew::services::websocket::WebSocketService::connect_text::<Text>("ws://localhost:8888", model.link.callback(|_| Msg::Ignore), model.link.callback(|_| Msg::Ignore)) {
+            Ok(web_socket_task) => {
+                model.web_socket_task = Some(web_socket_task);
+                wait_until_web_socket_is_open(&mut model);
             },
-            Err(_) => {
-                
-            }
+            Err(err) => {
+                println!("Failed to connect websocket, error: {}", err);
+            },
         }
-        temp
+        model
     }
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
@@ -87,29 +115,33 @@ impl Component for Model {
             Msg::AddOne => {
                 self.value += 1;
                 true
-            }
+            },
             Msg::Import => {
                 self.send_message("import");
                 self.value += 1;
 
                 true
-            }
+            },
             Msg::Process => {
                 self.send_message("process");
                 self.value += 1;
 
                 true
-            }
+            },
             Msg::Hash => {
                 self.send_message("hash");
                 self.value += 1;
 
                 true
-            }
+            },
             Msg::Ignore => {
                 //Does nothing
                 false
-            }
+            },
+            Msg::RequestFileVersions => {
+                self.send_request(RequestType::AllFileVersions);
+                false
+            },
         }
     }
 
@@ -136,6 +168,7 @@ impl Component for Model {
                             <td class={classes!("clickable", "navbar_element", "navbar_table")}><a class={classes!("navbar_button")} onclick=self.link.callback(|_| Msg::Import)>{ "Import" }</a></td>
                             <td class={classes!("clickable", "navbar_element", "navbar_table")}><a class={classes!("navbar_button")} onclick=self.link.callback(|_| Msg::Process)>{ "Process" }</a></td>
                             <td class={classes!("clickable", "navbar_element", "navbar_table")}><a class={classes!("navbar_button")} onclick=self.link.callback(|_| Msg::Hash)>{ "Hash" }</a></td>
+                            <td class={classes!("clickable", "navbar_element", "navbar_table")}><a class={classes!("navbar_button")} onclick=self.link.callback(|_| Msg::RequestFileVersions)>{ "RequestFileVersions" }</a></td>
                         </tr>
                     </table>
                 </nav>
@@ -167,12 +200,7 @@ impl Component for Model {
                                     <th class={classes!("row_portion")}><a>{ "" }</a></th>
                                     <th class={classes!("row_portion")}><a>{ "" }</a></th>
                                 </tr></div>
-                                <div class={classes!("details_row")}><tr>
-                                    <td class={classes!("row_portion")}><a>{ "Some test element and another little bit longer" }</a></td>
-                                    <td class={classes!("row_portion")}><a>{ "Some test element and another little bit longer" }</a></td>
-                                    <td class={classes!("row_portion")}><a>{ "Some test element and another little bit longer" }</a></td>
-                                    <td class={classes!("row_portion")}><a>{ "Some test element and another little bit longer" }</a></td>
-                                </tr></div>
+                                
                                 <div class={classes!("details_row")}><tr>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
