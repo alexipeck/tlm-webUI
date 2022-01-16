@@ -1,32 +1,7 @@
-use serde::{Serialize, Deserialize};
-use serde_json::Error;
-use yew::format::{bincode, Bincode};
-
-/* #[derive(Serialize, Deserialize)]
-pub enum WorkerMessage {
-    //Worker
-    Encode(Encode, AddEncodeMode),
-    Initialise(Option<i32>, PathBuf),
-    WorkerID(i32),
-    Announce(String),
-    EncodeStarted(i32, i32),
-    EncodeFinished(i32, i32, PathBuf),
-    MoveStarted(i32, i32, PathBuf, PathBuf),
-    MoveFinished(i32, i32, Encode),
-
-    //WebUI
-    EncodeGeneric(i32, i32, AddEncodeMode, EncodeProfile),
-    FileVersion(i32, i32, String),
-
-    //Generic
-    Text(String),
-}
-
-impl WorkerMessage {
-    pub fn to_message(self) -> Message {
-        MessageSource::Worker(self).to_message()
-    }
-} */
+use {
+    serde::{Serialize, Deserialize},
+    serde_json::Error,
+};
 
 #[derive(Serialize, Deserialize)]
 pub enum WorkerMessage {}
