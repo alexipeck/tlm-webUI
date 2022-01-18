@@ -6,10 +6,10 @@ use {
 #[derive(Serialize, Deserialize)]
 pub enum WorkerMessage {}
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct WebUIFileVersion {
     pub generic_uid: u32,
-    pub file_version_id: u32,
+    pub id: u32,
     pub file_name: String,
 }
 
@@ -32,17 +32,22 @@ impl MessageSource {
         }
     }
 
-    pub fn from_json(json: String) -> Self {
-        let raw_message_source: Result<MessageSource, Error> = serde_json::from_str(&json);
+    pub fn expect_webui_message(json: String) -> Option<WebUIMessage> {
+        let raw_message_source: Result<Self, serde_json::Error> = serde_json::from_str(&json);
         match raw_message_source {
             Ok(message_source) => {
-                message_source
+                match message_source {
+                    MessageSource::WebUI(webui_message) => {
+                        return Some(webui_message);
+                    },
+                    _ => return None,
+                }
             },
             Err(err) => {
                 println!("Failed converting json string to MessageSource, error output: {}", err);
-                panic!();
-            }
+            },
         }
+        None
     }
 
     pub fn from_webui_message(webui_message: WebUIMessage) -> Self {
