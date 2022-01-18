@@ -1,5 +1,3 @@
-use yew::format::Json;
-
 use {
     anyhow::Error,
     tlm_webui::{MessageSource, WebUIMessage, RequestType},
@@ -14,11 +12,11 @@ enum Msg {
     Process,
     Hash,
     Request(RequestType),
+    Test(String),
 
     Connect,
     Disconnected,
     Received(Result<String, Error>),
-    H,
 
     Ignore,
 }
@@ -54,12 +52,11 @@ struct Model {
     //web_socket_service: WebSocketService,
     //console: ConsoleService,
     simple_console: String,
-    connection_status: String,
 }
 
 impl Model {
     fn add_to_console(&mut self, message: &str) {
-        self.simple_console.push_str(&format!("{}\n", message))
+        self.simple_console.push_str(&format!("[{}]\n", message))
     }
 
     fn send_message(&mut self, message: &str) {
@@ -68,6 +65,21 @@ impl Model {
             match self.ws.as_mut() {
                 Some(web_socket_task) => {
                     web_socket_task.send(Ok(String::from(message)));
+                    break;
+                },
+                None => {
+                    wait_until_web_socket_is_open(self);
+                },
+            }
+        }
+    }
+
+    fn send_string(&mut self, send_text: String) {
+        let tries: usize = 3;
+        for _ in 0..tries {
+            match self.ws.as_mut() {
+                Some(web_socket_task) => {
+                    web_socket_task.send(Ok(send_text));
                     break;
                 },
                 None => {
@@ -102,54 +114,21 @@ impl Component for Model {
     fn create(_props: Self::Properties, link: ComponentLink<Self>) -> Self {
         panic::set_hook(Box::new(console_error_panic_hook::hook));
         Self {
+            ws: None,
             link,
             test_value: 0,
-            ws: None,
             //web_socket_service: WebSocketService::default(),
             //console: ConsoleService::default(),
             simple_console: String::new(),
-            connection_status: "Disconnected".to_string(),
         }
     }
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
         match msg {
-            Msg::AddOne => {
-                self.test_value += 1;
-                true
-            },
-            Msg::Import => {
-                self.send_message("import");
-                self.add_to_console("Import. ");
-                self.test_value += 1;
-                true
-            },
-            Msg::Process => {
-                self.send_message("process");
-                self.add_to_console("Process. ");
-                self.test_value += 1;
-                true
-            },
-            Msg::Hash => {
-                self.send_message("hash");
-                self.add_to_console("Hash. ");
-                self.test_value += 1;
-                true
-            },
-            Msg::Ignore => {
-                //Does nothing
-                false
-            },
-            Msg::Request(request_type) => {
-                self.send_request(request_type);
-                self.add_to_console("Request. ");
-                self.test_value += 1;
-                true
-            },
             Msg::Connect => {
                 ConsoleService::log("Connect");
-                self.add_to_console("Request. ");
-                let cbout = self.link.callback(|Json(data)| Msg::Received(data));
+                self.add_to_console("Connect");
+                let cbout = self.link.callback(|data | Msg::Received(data));
                 let cbnot = self.link.callback(|input| {
                     ConsoleService::log(&format!("Notification: {:?}", input));
                     match input {
@@ -162,42 +141,88 @@ impl Component for Model {
                 if self.ws.is_none() {
                     let task = WebSocketService::connect_text("ws://localhost:8888", cbout, cbnot);
                     self.ws = Some(task.unwrap());
-                    self.connection_status = "Connected".to_string();
                 }
                 self.test_value += 1;
                 true
             },
             Msg::Disconnected => {
                 self.ws = None;
-                self.connection_status = "Disconnected".to_string();
                 self.test_value += 1;
                 true
             },
             Msg::Received(Ok(message_string)) => {
+                //self.add_to_console(&message_string);
                 if message_string.starts_with('{') {
-                    let json = message_string;
-                    let message_source = MessageSource::from_json(json.clone());
-                    match message_source {
-                        MessageSource::WebUI(webui_message) => {
-                            if let WebUIMessage::FileVersions(file_versions) = webui_message {
-                                self.test_value += file_versions.len() as i64;
-                                self.add_to_console(&json);
-                                return true;
+                    let raw_message_source: Result<MessageSource, serde_json::Error> = serde_json::from_str(&message_string);
+                    match raw_message_source {
+                        Ok(message_source) => {
+                            match message_source {
+                                MessageSource::WebUI(WebUIMessage::FileVersions(file_versions)) => {
+                                    for file_version in file_versions.iter() {
+                                        self.add_to_console(&file_version.file_name);
+                                    }
+                                },
+                                _ => {
+                                    //Not actually a WebUIMessage
+                                    self.add_to_console(&message_string);
+                                    return true;
+                                },
                             }
                         },
-                        _ => {
-                            return false
-                        }
+                        Err(err) => {
+                            //Not actually a WebUIMessage
+                            self.add_to_console(&format!("Error converting json to MessageSource, Error: {}", err));
+                            self.add_to_console(&message_string);
+                            return true;
+                        },
                     }
+                } else {
+                    self.add_to_console(&message_string);
                 }
                 self.test_value += 1;
 				true    
 			}
-			Msg::Received(Err(message_string)) => {
-                self.add_to_console(&format!("Error when reading data from server: {}\n", &message_string.to_string()));
+			Msg::Received(Err(err)) => {
+                self.add_to_console(&format!("Error when reading data from server: {}", &err.to_string()));
                 self.test_value += 1;
                 true
 			}
+            Msg::AddOne => {
+                self.test_value += 1;
+                true
+            },
+            Msg::Import => {
+                self.send_message("import");
+                self.add_to_console("Import");
+                self.test_value += 1;
+                true
+            },
+            Msg::Process => {
+                self.send_message("process");
+                self.add_to_console("Process");
+                self.test_value += 1;
+                true
+            },
+            Msg::Hash => {
+                self.send_message("hash");
+                self.add_to_console("Hash");
+                self.test_value += 1;
+                true
+            },
+            Msg::Ignore => {
+                //Does nothing
+                false
+            },
+            Msg::Request(request_type) => {
+                self.send_request(request_type);
+                self.add_to_console("Request");
+                self.test_value += 1;
+                true
+            },
+            Msg::Test(string) => {
+                self.send_string(string);
+                true
+            },
             _ => {
                 false
             },
@@ -228,6 +253,7 @@ impl Component for Model {
                             <td class={classes!("clickable", "navbar_element", "navbar_table")}><a class={classes!("navbar_button")} onclick=self.link.callback(|_| Msg::Hash)>{ "Hash" }</a></td>
                             <td class={classes!("clickable", "navbar_element", "navbar_table")}><a class={classes!("navbar_button")} onclick=self.link.callback(|_| Msg::Request(RequestType::AllFileVersions))>{ "RequestFileVersions" }</a></td>
                             <td class={classes!("clickable", "navbar_element", "navbar_table")}><a class={classes!("navbar_button")} onclick=self.link.callback(|_| Msg::Connect)>{ "Connect" }</a></td>
+                            <td class={classes!("clickable", "navbar_element", "navbar_table")}><a class={classes!("navbar_button")} onclick=self.link.callback(|_| Msg::Test("test".to_string()))>{ "Test" }</a></td>
                         </tr>
                     </table>
                 </nav>
@@ -273,8 +299,7 @@ impl Component for Model {
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                 </tr></div>
                                 <div class={classes!("details_row")}>
-                                    <td><a value=self.connection_status.clone()></a></td>
-                                    <td><a value=self.simple_console.clone()></a></td>
+                                    <td><a> { format!("Connected: {} | ::Console::{}", self.ws.is_some(), self.simple_console.clone()) }</a></td>
                                 </div>
                             </table>
                         </div>
