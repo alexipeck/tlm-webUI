@@ -1,10 +1,12 @@
-use anyhow::Error;
-use tlm_webui::{MessageSource, WebUIMessage, RequestType};
-use yew::{services::console::ConsoleService, prelude::*};
-use yew::services::{Task, WebSocketService};
-use yew::services::websocket::{WebSocketTask, WebSocketStatus};
-use std::panic;
-use yew::format::Text;
+use yew::format::Json;
+
+use {
+    anyhow::Error,
+    tlm_webui::{MessageSource, WebUIMessage, RequestType},
+    yew::{prelude::*, services::{Task, console::ConsoleService, websocket::{WebSocketService, WebSocketTask, WebSocketStatus}}},
+    std::panic,
+    yew::format::Text,
+};
 
 enum Msg {
     AddOne,
@@ -12,16 +14,18 @@ enum Msg {
     Process,
     Hash,
     Request(RequestType),
-    Ignore,
+
     Connect,
     Disconnected,
     Received(Result<String, Error>),
     H,
+
+    Ignore,
 }
 
 fn wait_until_web_socket_is_open(structure: &mut Model) {
     loop {
-        match structure.web_socket_task.as_mut() {
+        match structure.ws.as_mut() {
             Some(web_socket_task) => {
                 while !web_socket_task.is_active() {
                     //Do nothing but take time
@@ -31,7 +35,7 @@ fn wait_until_web_socket_is_open(structure: &mut Model) {
             None => {
                 match yew::services::websocket::WebSocketService::connect_text::<Text>("ws://localhost:8888", structure.link.callback(|_| Msg::Ignore), structure.link.callback(|_| Msg::Ignore)) {
                     Ok(web_socket_task) => {
-                        structure.web_socket_task = Some(web_socket_task);
+                        structure.ws = Some(web_socket_task);
                         continue;
                     },
                     Err(err) => {
@@ -45,11 +49,12 @@ fn wait_until_web_socket_is_open(structure: &mut Model) {
 
 struct Model {
     link: ComponentLink<Self>,
-    value: i64,
-    web_socket_task: Option<WebSocketTask>,
-    web_socket_service: WebSocketService,
-    console: ConsoleService,
+    test_value: i64,
+    ws: Option<WebSocketTask>,
+    //web_socket_service: WebSocketService,
+    //console: ConsoleService,
     simple_console: String,
+    connection_status: String,
 }
 
 impl Model {
@@ -60,7 +65,7 @@ impl Model {
     fn send_message(&mut self, message: &str) {
         let tries: usize = 3;
         for _ in 0..tries {
-            match self.web_socket_task.as_mut() {
+            match self.ws.as_mut() {
                 Some(web_socket_task) => {
                     web_socket_task.send(Ok(String::from(message)));
                     break;
@@ -77,7 +82,7 @@ impl Model {
         let message_source_json = t.to_json();
         let tries: usize = 3;
         for _ in 0..tries {
-            match self.web_socket_task.as_mut() {
+            match self.ws.as_mut() {
                 Some(web_socket_task) => {
                     web_socket_task.send(Ok(message_source_json));
                     break;
@@ -96,49 +101,39 @@ impl Component for Model {
 
     fn create(_props: Self::Properties, link: ComponentLink<Self>) -> Self {
         panic::set_hook(Box::new(console_error_panic_hook::hook));
-        let mut model = Self {
+        Self {
             link,
-            value: 0,
-            web_socket_task: None,
-            web_socket_service: WebSocketService::default(),
-            console: ConsoleService::default(),
+            test_value: 0,
+            ws: None,
+            //web_socket_service: WebSocketService::default(),
+            //console: ConsoleService::default(),
             simple_console: String::new(),
-        };
-        match WebSocketService::connect_text::<Text>("ws://localhost:8888", model.link.callback(|_| Msg::Ignore), model.link.callback(|_| Msg::Ignore)) {
-            Ok(web_socket_task) => {
-                model.web_socket_task = Some(web_socket_task);
-                wait_until_web_socket_is_open(&mut model);
-            },
-            Err(err) => {
-                model.add_to_console(&format!("Failed to connect websocket, error: {}", err))
-            },
+            connection_status: "Disconnected".to_string(),
         }
-        model
     }
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
         match msg {
             Msg::AddOne => {
-                self.value += 1;
-                self.add_to_console("Added one.");
+                self.test_value += 1;
                 true
             },
             Msg::Import => {
                 self.send_message("import");
-                self.value += 1;
-                self.add_to_console("Trigger Import.");
+                self.add_to_console("Import. ");
+                self.test_value += 1;
                 true
             },
             Msg::Process => {
                 self.send_message("process");
-                self.value += 1;
-                self.add_to_console("Trigger Process");
+                self.add_to_console("Process. ");
+                self.test_value += 1;
                 true
             },
             Msg::Hash => {
                 self.send_message("hash");
-                self.value += 1;
-                self.add_to_console("Trigger Hash.");
+                self.add_to_console("Hash. ");
+                self.test_value += 1;
                 true
             },
             Msg::Ignore => {
@@ -147,64 +142,60 @@ impl Component for Model {
             },
             Msg::Request(request_type) => {
                 self.send_request(request_type);
-                self.add_to_console("Requesting stuff");
+                self.add_to_console("Request. ");
+                self.test_value += 1;
                 true
             },
             Msg::Connect => {
-                //self.console.log("F Test");
-                yew::services::ConsoleService::log("Connect");
-                //let t = self.link.
-                //let cbout = self.link.callback(function)|Json(data)| Msg::Received(data);
-				//let cbnot = self.link.send_back(|input| {
-				//	yew::services::ConsoleService::log(&format!("Notification: {:?}", input));
-				//	match input {
-				//		WebSocketStatus::Closed | WebSocketStatus::Error => {
-				//			Msg::Disconnected
-				//		}
-				//		_ => Msg::Ignore,
-				//	}
-				//});
-				//if self.web_socket_task.is_none() {
-				//	let task = WebSocketService::connect("ws://127.0.0.1:8888", cbout, cbnot.into());
-                //    match task {
-                //        Ok(websocket_task) => {
-                //            self.web_socket_task = Some(websocket_task);
-                //        },
-                //        Err(err) => {
-                //            println!("{}", err);
-                //            panic!();
-                //        },
-                //    }
-				//}
-                false
+                ConsoleService::log("Connect");
+                self.add_to_console("Request. ");
+                let cbout = self.link.callback(|Json(data)| Msg::Received(data));
+                let cbnot = self.link.callback(|input| {
+                    ConsoleService::log(&format!("Notification: {:?}", input));
+                    match input {
+                        WebSocketStatus::Closed | WebSocketStatus::Error => {
+                            Msg::Disconnected
+                        }
+                        _ => Msg::Ignore,
+                    }
+                });
+                if self.ws.is_none() {
+                    let task = WebSocketService::connect_text("ws://localhost:8888", cbout, cbnot);
+                    self.ws = Some(task.unwrap());
+                    self.connection_status = "Connected".to_string();
+                }
+                self.test_value += 1;
+                true
             },
             Msg::Disconnected => {
-                //Does nothing
-                false
+                self.ws = None;
+                self.connection_status = "Disconnected".to_string();
+                self.test_value += 1;
+                true
             },
             Msg::Received(Ok(message_string)) => {
                 if message_string.starts_with('{') {
                     let json = message_string;
-                    let message_source = MessageSource::from_json(json);
+                    let message_source = MessageSource::from_json(json.clone());
                     match message_source {
                         MessageSource::WebUI(webui_message) => {
                             if let WebUIMessage::FileVersions(file_versions) = webui_message {
-                                self.value += file_versions.len() as i64;
-                                    return true;
+                                self.test_value += file_versions.len() as i64;
+                                self.add_to_console(&json);
+                                return true;
                             }
                         },
                         _ => {
-                            return false;
+                            return false
                         }
                     }
                 }
-                self.add_to_console("Received data.");
+                self.test_value += 1;
 				true    
 			}
 			Msg::Received(Err(message_string)) => {
-				/* self.server_data.push_str(&format!("Error when reading data from server: {}\n", &message_string.to_string()));
-				true */
                 self.add_to_console(&format!("Error when reading data from server: {}\n", &message_string.to_string()));
+                self.test_value += 1;
                 true
 			}
             _ => {
@@ -231,12 +222,12 @@ impl Component for Model {
                         //Details view of directories/paths with relevant controls in the control bar.
                         //Details view of all imported with relevant controls in the control bar.
                         //Details view of all imported with relevant controls in the control bar.
-                            <td class={classes!("clickable", "navbar_element", "navbar_table")}><a class={classes!("navbar_button")} onclick=self.link.callback(|_| Msg::AddOne)>{ self.value }</a></td>
+                            <td class={classes!("clickable", "navbar_element", "navbar_table")}><a class={classes!("navbar_button")} onclick=self.link.callback(|_| Msg::AddOne)>{ self.test_value }</a></td>
                             <td class={classes!("clickable", "navbar_element", "navbar_table")}><a class={classes!("navbar_button")} onclick=self.link.callback(|_| Msg::Import)>{ "Import" }</a></td>
                             <td class={classes!("clickable", "navbar_element", "navbar_table")}><a class={classes!("navbar_button")} onclick=self.link.callback(|_| Msg::Process)>{ "Process" }</a></td>
                             <td class={classes!("clickable", "navbar_element", "navbar_table")}><a class={classes!("navbar_button")} onclick=self.link.callback(|_| Msg::Hash)>{ "Hash" }</a></td>
                             <td class={classes!("clickable", "navbar_element", "navbar_table")}><a class={classes!("navbar_button")} onclick=self.link.callback(|_| Msg::Request(RequestType::AllFileVersions))>{ "RequestFileVersions" }</a></td>
-                            <td class={classes!("clickable", "navbar_element", "navbar_table")}><a class={classes!("navbar_button")} onclick=self.link.callback(|_| Msg::Connect)>{ "Test" }</a></td>
+                            <td class={classes!("clickable", "navbar_element", "navbar_table")}><a class={classes!("navbar_button")} onclick=self.link.callback(|_| Msg::Connect)>{ "Connect" }</a></td>
                         </tr>
                     </table>
                 </nav>
@@ -282,7 +273,8 @@ impl Component for Model {
                                     <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
                                 </tr></div>
                                 <div class={classes!("details_row")}>
-                                    <td><a></a>{ &self.simple_console }</td>
+                                    <td><a value=self.connection_status.clone()></a></td>
+                                    <td><a value=self.simple_console.clone()></a></td>
                                 </div>
                             </table>
                         </div>
