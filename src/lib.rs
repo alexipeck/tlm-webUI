@@ -1,3 +1,7 @@
+use std::fmt;
+
+use yew::Html;
+
 use {
     serde::{Serialize, Deserialize},
     serde_json::Error,
@@ -6,11 +10,17 @@ use {
 #[derive(Serialize, Deserialize)]
 pub enum WorkerMessage {}
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct WebUIFileVersion {
     pub generic_uid: u32,
     pub id: u32,
     pub file_name: String,
+}
+
+impl fmt::Display for WebUIFileVersion {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "generic_uid: {}, id: {}, file_name: {}", self.generic_uid, self.id, self.file_name)
+    }
 }
 
 #[derive(Serialize, Deserialize)]

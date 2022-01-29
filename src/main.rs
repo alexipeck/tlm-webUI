@@ -1,3 +1,5 @@
+use tlm_webui::WebUIFileVersion;
+
 use {
     anyhow::Error,
     tlm_webui::{MessageSource, WebUIMessage, RequestType},
@@ -17,6 +19,7 @@ enum Msg {
     Connect,
     Disconnected,
     Received(Result<String, Error>),
+    EncodeAll,
 
     Ignore,
 }
@@ -52,11 +55,16 @@ struct Model {
     //web_socket_service: WebSocketService,
     //console: ConsoleService,
     simple_console: String,
+    rows: Vec<WebUIFileVersion>,
 }
 
 impl Model {
     fn add_to_console(&mut self, message: &str) {
         self.simple_console.push_str(&format!("[{}]\n", message))
+    }
+
+    fn add_file_version_to_context(&mut self, file_version: &WebUIFileVersion) {
+        self.rows.push(file_version.clone());
     }
 
     fn send_message(&mut self, message: &str) {
@@ -113,17 +121,44 @@ impl Component for Model {
 
     fn create(_props: Self::Properties, link: ComponentLink<Self>) -> Self {
         panic::set_hook(Box::new(console_error_panic_hook::hook));
-        Self {
+        let mut model = Self {
             ws: None,
             link,
             test_value: 0,
             //web_socket_service: WebSocketService::default(),
             //console: ConsoleService::default(),
             simple_console: String::new(),
-        }
+            rows: Vec::new(),
+        };
+        let cbout = model.link.callback(|data | Msg::Received(data));
+                let cbnot = model.link.callback(|input| {
+                    ConsoleService::log(&format!("Notification: {:?}", input));
+                    match input {
+                        WebSocketStatus::Closed | WebSocketStatus::Error => {
+                            Msg::Disconnected
+                        }
+                        _ => Msg::Ignore,
+                    }
+                });
+        model.ws = Some(WebSocketService::connect_text("ws://localhost:8888", cbout, cbnot).unwrap());
+        model
     }
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
+        let cbout = self.link.callback(|data | Msg::Received(data));
+        let cbnot = self.link.callback(|input| {
+            ConsoleService::log(&format!("Notification: {:?}", input));
+            match input {
+                WebSocketStatus::Closed | WebSocketStatus::Error => {
+                    Msg::Disconnected
+                }
+                _ => Msg::Ignore,
+            }
+        });
+        if self.ws.is_none() {
+            let task = WebSocketService::connect_text("ws://localhost:8888", cbout, cbnot);
+            self.ws = Some(task.unwrap());
+        }
         match msg {
             Msg::Connect => {
                 ConsoleService::log("Connect");
@@ -159,7 +194,8 @@ impl Component for Model {
                             match message_source {
                                 MessageSource::WebUI(WebUIMessage::FileVersions(file_versions)) => {
                                     for file_version in file_versions.iter() {
-                                        self.add_to_console(&file_version.file_name);
+                                        //self.add_to_console(&file_version.file_name);
+                                        self.add_file_version_to_context(file_version);
                                     }
                                 },
                                 _ => {
@@ -209,6 +245,12 @@ impl Component for Model {
                 self.test_value += 1;
                 true
             },
+            Msg::EncodeAll => {
+                self.send_message("encode_all");
+                self.add_to_console("EncodeAll");
+                self.test_value += 1;
+                true
+            },
             Msg::Ignore => {
                 //Does nothing
                 false
@@ -251,8 +293,9 @@ impl Component for Model {
                             <td class={classes!("clickable", "navbar_element", "navbar_table")}><a class={classes!("navbar_button")} onclick=self.link.callback(|_| Msg::Import)>{ "Import" }</a></td>
                             <td class={classes!("clickable", "navbar_element", "navbar_table")}><a class={classes!("navbar_button")} onclick=self.link.callback(|_| Msg::Process)>{ "Process" }</a></td>
                             <td class={classes!("clickable", "navbar_element", "navbar_table")}><a class={classes!("navbar_button")} onclick=self.link.callback(|_| Msg::Hash)>{ "Hash" }</a></td>
+                            <td class={classes!("clickable", "navbar_element", "navbar_table")}><a class={classes!("navbar_button")} onclick=self.link.callback(|_| Msg::EncodeAll)>{ "Encode" }</a></td>
                             <td class={classes!("clickable", "navbar_element", "navbar_table")}><a class={classes!("navbar_button")} onclick=self.link.callback(|_| Msg::Request(RequestType::AllFileVersions))>{ "RequestFileVersions" }</a></td>
-                            <td class={classes!("clickable", "navbar_element", "navbar_table")}><a class={classes!("navbar_button")} onclick=self.link.callback(|_| Msg::Connect)>{ "Connect" }</a></td>
+                            <td class={classes!("clickable", "navbar_element", "navbar_table")}><a class={classes!("navbar_button")} onclick=self.link.callback(|_| Msg::Connect)>{ if self.ws.is_some() { "" } else { "Connect" }}</a></td>
                             <td class={classes!("clickable", "navbar_element", "navbar_table")}><a class={classes!("navbar_button")} onclick=self.link.callback(|_| Msg::Test("test".to_string()))>{ "Test" }</a></td>
                         </tr>
                     </table>
@@ -278,29 +321,22 @@ impl Component for Model {
 
                         //Details View
                         <div class={classes!("main")}>
-                            <table class={classes!("details_table")}>  
-                                <div class={classes!("details_row")}><tr>
-                                    <th class={classes!("row_portion")}><a>{ "Path" }</a></th>
-                                    <th class={classes!("row_portion")}><a>{ "" }</a></th>
-                                    <th class={classes!("row_portion")}><a>{ "" }</a></th>
-                                    <th class={classes!("row_portion")}><a>{ "" }</a></th>
-                                </tr></div>
-                                
-                                <div class={classes!("details_row")}><tr>
-                                    <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
-                                    <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
-                                    <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
-                                    <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
-                                </tr></div>
-                                <div class={classes!("details_row")}><tr>
-                                    <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
-                                    <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
-                                    <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
-                                    <td class={classes!("row_portion")}><a>{ "Some test element" }</a></td>
-                                </tr></div>
+                            <table class={classes!("details_table")}>
                                 <div class={classes!("details_row")}>
                                     <td><a> { format!("Connected: {} | ::Console::{}", self.ws.is_some(), self.simple_console.clone()) }</a></td>
                                 </div>
+                                {
+                                    self.rows.clone().into_iter().map(|row| {
+                                        html!{<div class={classes!("details_row")}>{ format!("{}", row) }</div>}
+                                    }).collect::<Html>()
+                        
+                                    //self.rows.iter().to_string()
+                                    /* for t in self.rows.iter() {
+
+                                    } */
+                                    //self.rows.iter().collect::<Html>()
+                                }
+                                
                             </table>
                         </div>
                     </body>
