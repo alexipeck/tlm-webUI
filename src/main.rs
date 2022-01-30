@@ -217,7 +217,6 @@ impl Component for Model {
                 true
             },
             Msg::Received(Ok(message_string)) => {
-                //self.add_to_console(&message_string);
                 if message_string.starts_with('{') {
                     let raw_message_source: Result<MessageSource, serde_json::Error> = serde_json::from_str(&message_string);
                     match raw_message_source {
@@ -309,7 +308,6 @@ impl Component for Model {
     fn change(&mut self, _props: Self::Properties) -> ShouldRender {
         // Should only return "true" if new properties are different to
         // previously received properties.
-        // This component has no properties so we will always return "false".
         false
     }
 
