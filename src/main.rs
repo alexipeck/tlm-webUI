@@ -58,6 +58,7 @@ pub enum Tab {
 
 pub struct DataContext{
     file_versions: HashSet<WebUIFileVersion>,
+    //profiles: HashSet<EncodeProfile>,
     //shows: HashSet<>,
 }
 
@@ -339,8 +340,8 @@ impl Component for Model {
                             //sidebar elements will have a child if they have more than one page
                             <table class={classes!("sidebar")}>
                                 <tr class={classes!("clickable", "sidebar_element")}><a>{ "Dashboard" }</a></tr>
-                                <tr class={classes!("clickable", "sidebar_element")}><a>{ "Import" }</a></tr>
-                                <tr class={classes!("clickable", "sidebar_element")}><a>{ "Main" }</a></tr>
+                                <tr class={classes!("clickable", "sidebar_element")}><a>{ "Profiles" }</a></tr>
+                                <tr class={classes!("clickable", "sidebar_element")}><a>{ "List" }</a></tr>
                                 <tr class={classes!("clickable", "sidebar_element", "sidebar_element_child")}><a>{ "Organise" }</a></tr>
                                 <tr class={classes!("clickable", "sidebar_element", "sidebar_element_child")}><a>{ "Process" }</a></tr>
                             </table>

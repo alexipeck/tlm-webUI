@@ -64,6 +64,10 @@ impl MessageSource {
 #[derive(Serialize, Deserialize)]
 pub enum RequestType {
     AllFileVersions,
+    AllProfiles,
+    AllGenerics,
+    FileVersions(usize, usize), //specified range, this will be used for indexing the server's storage structure
+    Generics(usize, usize), //specified range, this will be used for indexing the server's storage structure
 }
 
 #[derive(Serialize, Deserialize)]
@@ -76,6 +80,8 @@ pub enum WebUIMessage {
     Encode(i32, i32),
     FileVersion(i32, i32, String),
     FileVersions(Vec<WebUIFileVersion>),
+    Generic(i32, i32, String),
+    //Generics(Vec<WebUIGeneric>),
 }
 
 impl WebUIMessage {}
