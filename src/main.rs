@@ -5,7 +5,7 @@ use tlm_webui::WebUIFileVersion;
 use {
     anyhow::Error,
     tlm_webui::{MessageSource, WebUIMessage, RequestType},
-    yew::{prelude::*, services::{Task, console::ConsoleService, websocket::{WebSocketService, WebSocketTask, WebSocketStatus}}},
+    yew::{prelude::*, services::{Task, websocket::{WebSocketService, WebSocketTask, WebSocketStatus}}},
     std::panic,
     yew::format::Text,
 };
@@ -51,6 +51,11 @@ fn wait_until_web_socket_is_open(structure: &mut Model) {
     }
 }
 
+pub enum Tab {
+    Shows,
+    FileVersions,
+}
+
 pub struct DataContext{
     file_versions: HashSet<WebUIFileVersion>,
     //shows: HashSet<>,
@@ -68,17 +73,11 @@ struct Model {
     link: ComponentLink<Self>,
     test_value: i64,
     ws: Option<WebSocketTask>,
-    //web_socket_service: WebSocketService,
-    //console: ConsoleService,
-    simple_console: String,
     data: DataContext,
+    current_tab: Tab,
 }
 
 impl Model {
-    fn add_to_console(&mut self, message: &str) {
-        self.simple_console.push_str(&format!("[{}]\n", message))
-    }
-
     fn add_file_version_to_context(&mut self, file_version: &WebUIFileVersion) {
         self.data.file_versions.insert(file_version.clone());
     }
@@ -156,29 +155,11 @@ impl Component for Model {
             ws: None,
             link,
             test_value: 0,
-            //web_socket_service: WebSocketService::default(),
-            //console: ConsoleService::default(),
-            simple_console: String::new(),
             data: DataContext::default(),
+            current_tab: Tab::FileVersions,
         };
         let cbout = model.link.callback(|data | Msg::Received(data));
-                let cbnot = model.link.callback(|input| {
-                    ConsoleService::log(&format!("Notification: {:?}", input));
-                    match input {
-                        WebSocketStatus::Closed | WebSocketStatus::Error => {
-                            Msg::Disconnected
-                        }
-                        _ => Msg::Ignore,
-                    }
-                });
-        model.ws = Some(WebSocketService::connect_text("ws://localhost:8888", cbout, cbnot).unwrap());
-        model
-    }
-
-    fn update(&mut self, msg: Self::Message) -> ShouldRender {
-        let cbout = self.link.callback(|data | Msg::Received(data));
-        let cbnot = self.link.callback(|input| {
-            ConsoleService::log(&format!("Notification: {:?}", input));
+        let cbnot = model.link.callback(|input| {
             match input {
                 WebSocketStatus::Closed | WebSocketStatus::Error => {
                     Msg::Disconnected
@@ -186,17 +167,38 @@ impl Component for Model {
                 _ => Msg::Ignore,
             }
         });
-        if self.ws.is_none() {
+        model.ws = Some(WebSocketService::connect_text("ws://localhost:8888", cbout, cbnot).unwrap());
+        model
+    }
+
+    fn update(&mut self, msg: Self::Message) -> ShouldRender {
+        /* if self.ws.is_none() {
+            let cbout = self.link.callback(|data | Msg::Received(data));
+            let cbnot = self.link.callback(|input| {
+                match input {
+                    WebSocketStatus::Closed | WebSocketStatus::Error => {
+                        Msg::Disconnected
+                    }
+                    _ => Msg::Ignore,
+                }
+            });
             let task = WebSocketService::connect_text("ws://localhost:8888", cbout, cbnot);
             self.ws = Some(task.unwrap());
+            self.test_value += 1;
+        } */
+        
+        match self.current_tab {
+            Tab::FileVersions => {
+                self.link.callback(|_: ()| Msg::Request(RequestType::AllFileVersions));
+            },
+            Tab::Shows => {},
         }
+
+        
         match msg {
             Msg::Reconnect => {
-                ConsoleService::log("Connect");
-                self.add_to_console("Connect");
                 let cbout = self.link.callback(|data | Msg::Received(data));
                 let cbnot = self.link.callback(|input| {
-                    ConsoleService::log(&format!("Notification: {:?}", input));
                     match input {
                         WebSocketStatus::Closed | WebSocketStatus::Error => {
                             Msg::Disconnected
@@ -224,32 +226,26 @@ impl Component for Model {
                             match message_source {
                                 MessageSource::WebUI(WebUIMessage::FileVersions(file_versions)) => {
                                     for file_version in file_versions.iter() {
-                                        //self.add_to_console(&file_version.file_name);
                                         self.add_file_version_to_context(file_version);
                                     }
                                 },
                                 _ => {
                                     //Not actually a WebUIMessage
-                                    self.add_to_console(&message_string);
-                                    return true;
+                                    return false;
                                 },
                             }
                         },
-                        Err(err) => {
+                        Err(_) => {
                             //Not actually a WebUIMessage
-                            self.add_to_console(&format!("Error converting json to MessageSource, Error: {}", err));
-                            self.add_to_console(&message_string);
-                            return true;
+                            return false;
                         },
                     }
                 } else {
-                    self.add_to_console(&message_string);
                 }
                 self.test_value += 1;
 				true    
 			}
 			Msg::Received(Err(err)) => {
-                self.add_to_console(&format!("Error when reading data from server: {}", &err.to_string()));
                 self.test_value += 1;
                 true
 			}
@@ -259,30 +255,27 @@ impl Component for Model {
             },
             Msg::Import => {
                 self.send_message("import");
-                self.add_to_console("Import");
                 self.test_value += 1;
                 true
             },
             Msg::Process => {
                 self.send_message("process");
-                self.add_to_console("Process");
                 self.test_value += 1;
                 true
             },
             Msg::Hash => {
                 self.send_message("hash");
-                self.add_to_console("Hash");
                 self.test_value += 1;
                 true
             },
             Msg::EncodeAll => {
                 self.send_message("encode_all");
-                self.add_to_console("EncodeAll");
                 self.test_value += 1;
                 true
             },
             Msg::Encode(generic_uid, id) => {
                 self.send_command(WebUIMessage::Encode(generic_uid, id));
+                self.test_value += 1;
                 true
             },
             Msg::Ignore => {
@@ -291,7 +284,6 @@ impl Component for Model {
             },
             Msg::Request(request_type) => {
                 self.send_request(request_type);
-                self.add_to_console("Request");
                 self.test_value += 1;
                 true
             },
@@ -326,7 +318,6 @@ impl Component for Model {
                             <td class={classes!("clickable", "navbar_element", "navbar_table")}><a class={classes!("navbar_button")} onclick=self.link.callback(|_| Msg::Import)>{ "Import" }</a></td>
                             <td class={classes!("clickable", "navbar_element", "navbar_table")}><a class={classes!("navbar_button")} onclick=self.link.callback(|_| Msg::Process)>{ "Process" }</a></td>
                             <td class={classes!("clickable", "navbar_element", "navbar_table")}><a class={classes!("navbar_button")} onclick=self.link.callback(|_| Msg::Hash)>{ "Hash" }</a></td>
-                            <td class={classes!("clickable", "navbar_element", "navbar_table")}><a class={classes!("navbar_button")} onclick=self.link.callback(|_| Msg::EncodeAll)>{ "Encode" }</a></td>
                             <td class={classes!("clickable", "navbar_element", "navbar_table")}><a class={classes!("navbar_button")} onclick=self.link.callback(|_| Msg::Request(RequestType::AllFileVersions))>{ "RequestFileVersions" }</a></td>
                             <td class={classes!("clickable", "navbar_element", "navbar_table")}><a class={classes!("navbar_button")} onclick=self.link.callback(|_| Msg::Test("test".to_string()))>{ "Test" }</a></td>
                             {
@@ -364,7 +355,7 @@ impl Component for Model {
                         <div class={classes!("main")}>
                             <table class={classes!("details_table")}>
                                 <div class={classes!("details_row")}>
-                                    <td><a> { format!("Connected: {} | ::Console::{}", self.ws.is_some(), self.simple_console.clone()) }</a></td>
+                                    <td><a> { format!("Connected: {}", self.ws.is_some()) }</a></td>
                                 </div>
                                 {
                                     self.data.file_versions.clone().into_iter().map(|row| {
@@ -372,10 +363,11 @@ impl Component for Model {
                                         let id = row.id.clone();
                                         let file_name = row.file_name.clone();
                                         html!{
-                                            <div class={classes!("details_row")} onclick=self.link.callback( move |_| Msg::Encode(generic_uid, id))>
+                                            <div class={classes!("details_row")}>
                                                 <th class={classes!("row_portion")}><a>{ format!("{}", file_name) }</a></th>
                                                 <th class={classes!("row_portion")}><a>{ format!("{}", generic_uid) }</a></th>
                                                 <th class={classes!("row_portion")}><a>{ format!("{}", id) }</a></th>
+                                                <th class={classes!("row_portion")}><button onclick=self.link.callback( move |_| Msg::Encode(generic_uid, id))>{ "Encode" }</button></th>
                                             </div>
                                         }
                                         //html!{<div class={classes!("details_row")}>{ format!("{}", row) }</div>}
