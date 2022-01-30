@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use tlm_webui::WebUIFileVersion;
 
 use {
@@ -16,10 +18,11 @@ enum Msg {
     Request(RequestType),
     Test(String),
 
-    Connect,
+    Reconnect,
     Disconnected,
     Received(Result<String, Error>),
     EncodeAll,
+    Encode(i32, i32),
 
     Ignore,
 }
@@ -48,6 +51,19 @@ fn wait_until_web_socket_is_open(structure: &mut Model) {
     }
 }
 
+pub struct DataContext{
+    file_versions: HashSet<WebUIFileVersion>,
+    //shows: HashSet<>,
+}
+
+impl DataContext {
+    pub fn default() -> Self {
+        Self {
+            file_versions: HashSet::new(),
+        }
+    }
+}
+
 struct Model {
     link: ComponentLink<Self>,
     test_value: i64,
@@ -55,7 +71,7 @@ struct Model {
     //web_socket_service: WebSocketService,
     //console: ConsoleService,
     simple_console: String,
-    rows: Vec<WebUIFileVersion>,
+    data: DataContext,
 }
 
 impl Model {
@@ -64,7 +80,7 @@ impl Model {
     }
 
     fn add_file_version_to_context(&mut self, file_version: &WebUIFileVersion) {
-        self.rows.push(file_version.clone());
+        self.data.file_versions.insert(file_version.clone());
     }
 
     fn send_message(&mut self, message: &str) {
@@ -73,6 +89,21 @@ impl Model {
             match self.ws.as_mut() {
                 Some(web_socket_task) => {
                     web_socket_task.send(Ok(String::from(message)));
+                    break;
+                },
+                None => {
+                    wait_until_web_socket_is_open(self);
+                },
+            }
+        }
+    }
+
+    fn send_command(&mut self, message: WebUIMessage) {
+        let tries: usize = 3;
+        for _ in 0..tries {
+            match self.ws.as_mut() {
+                Some(web_socket_task) => {
+                    web_socket_task.send(Ok(MessageSource::from_webui_message(message).to_json()));
                     break;
                 },
                 None => {
@@ -128,7 +159,7 @@ impl Component for Model {
             //web_socket_service: WebSocketService::default(),
             //console: ConsoleService::default(),
             simple_console: String::new(),
-            rows: Vec::new(),
+            data: DataContext::default(),
         };
         let cbout = model.link.callback(|data | Msg::Received(data));
                 let cbnot = model.link.callback(|input| {
@@ -160,7 +191,7 @@ impl Component for Model {
             self.ws = Some(task.unwrap());
         }
         match msg {
-            Msg::Connect => {
+            Msg::Reconnect => {
                 ConsoleService::log("Connect");
                 self.add_to_console("Connect");
                 let cbout = self.link.callback(|data | Msg::Received(data));
@@ -251,6 +282,10 @@ impl Component for Model {
                 self.test_value += 1;
                 true
             },
+            Msg::Encode(generic_uid, id) => {
+                self.send_command(WebUIMessage::Encode(generic_uid, id));
+                true
+            },
             Msg::Ignore => {
                 //Does nothing
                 false
@@ -295,8 +330,16 @@ impl Component for Model {
                             <td class={classes!("clickable", "navbar_element", "navbar_table")}><a class={classes!("navbar_button")} onclick=self.link.callback(|_| Msg::Hash)>{ "Hash" }</a></td>
                             <td class={classes!("clickable", "navbar_element", "navbar_table")}><a class={classes!("navbar_button")} onclick=self.link.callback(|_| Msg::EncodeAll)>{ "Encode" }</a></td>
                             <td class={classes!("clickable", "navbar_element", "navbar_table")}><a class={classes!("navbar_button")} onclick=self.link.callback(|_| Msg::Request(RequestType::AllFileVersions))>{ "RequestFileVersions" }</a></td>
-                            <td class={classes!("clickable", "navbar_element", "navbar_table")}><a class={classes!("navbar_button")} onclick=self.link.callback(|_| Msg::Connect)>{ if self.ws.is_some() { "" } else { "Connect" }}</a></td>
                             <td class={classes!("clickable", "navbar_element", "navbar_table")}><a class={classes!("navbar_button")} onclick=self.link.callback(|_| Msg::Test("test".to_string()))>{ "Test" }</a></td>
+                            {
+                                if self.ws.is_none() {
+                                    html!{
+                                        <td class={classes!("clickable", "navbar_element", "navbar_table")}><a class={classes!("navbar_button")} onclick=self.link.callback(|_| Msg::Reconnect)>{ "Reconnect" }</a></td>
+                                    }
+                                } else {
+                                    html!{}
+                                }
+                            }
                         </tr>
                     </table>
                 </nav>
@@ -326,8 +369,18 @@ impl Component for Model {
                                     <td><a> { format!("Connected: {} | ::Console::{}", self.ws.is_some(), self.simple_console.clone()) }</a></td>
                                 </div>
                                 {
-                                    self.rows.clone().into_iter().map(|row| {
-                                        html!{<div class={classes!("details_row")}>{ format!("{}", row) }</div>}
+                                    self.data.file_versions.clone().into_iter().map(|row| {
+                                        let generic_uid = row.generic_uid.clone();
+                                        let id = row.id.clone();
+                                        let file_name = row.file_name.clone();
+                                        html!{
+                                            <div class={classes!("details_row")} onclick=self.link.callback( move |_| Msg::Encode(generic_uid, id))>
+                                                <th class={classes!("row_portion")}><a>{ format!("{}", file_name) }</a></th>
+                                                <th class={classes!("row_portion")}><a>{ format!("{}", generic_uid) }</a></th>
+                                                <th class={classes!("row_portion")}><a>{ format!("{}", id) }</a></th>
+                                            </div>
+                                        }
+                                        //html!{<div class={classes!("details_row")}>{ format!("{}", row) }</div>}
                                     }).collect::<Html>()
                         
                                     //self.rows.iter().to_string()

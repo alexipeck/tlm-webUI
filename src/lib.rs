@@ -1,19 +1,15 @@
-use std::fmt;
-
-use yew::Html;
-
 use {
+    std::fmt,
     serde::{Serialize, Deserialize},
-    serde_json::Error,
 };
 
 #[derive(Serialize, Deserialize)]
 pub enum WorkerMessage {}
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct WebUIFileVersion {
-    pub generic_uid: u32,
-    pub id: u32,
+    pub generic_uid: i32,
+    pub id: i32,
     pub file_name: String,
 }
 
@@ -77,6 +73,7 @@ pub enum WebUIMessage {
     //EncodeGeneric(i32, i32, AddEncodeMode, EncodeProfile),
     
     //Server -> WebUI
+    Encode(i32, i32),
     FileVersion(i32, i32, String),
     FileVersions(Vec<WebUIFileVersion>),
 }
