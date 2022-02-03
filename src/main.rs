@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use tlm_webui::WebUIFileVersion;
+use tlm_webui::{WebUIFileVersion, WebUIShow};
 
 use {
     anyhow::Error,
@@ -59,13 +59,14 @@ pub enum Tab {
 pub struct DataContext{
     file_versions: HashSet<WebUIFileVersion>,
     //profiles: HashSet<EncodeProfile>,
-    //shows: HashSet<>,
+    shows: HashSet<WebUIShow>,
 }
 
 impl DataContext {
     pub fn default() -> Self {
         Self {
             file_versions: HashSet::new(),
+            shows: HashSet::new(),
         }
     }
 }
@@ -81,6 +82,10 @@ struct Model {
 impl Model {
     fn add_file_version_to_context(&mut self, file_version: &WebUIFileVersion) {
         self.data.file_versions.insert(file_version.clone());
+    }
+
+    fn add_shows_to_context(&mut self, show: &WebUIShow) {
+        self.data.shows.insert(show.clone());
     }
 
     fn send_message(&mut self, message: &str) {
@@ -228,6 +233,11 @@ impl Component for Model {
                                 MessageSource::WebUI(WebUIMessage::FileVersions(file_versions)) => {
                                     for file_version in file_versions.iter() {
                                         self.add_file_version_to_context(file_version);
+                                    }
+                                },
+                                MessageSource::WebUI(WebUIMessage::Shows(shows)) => {
+                                    for show in shows.iter() {
+                                        self.add_shows_to_context(show);
                                     }
                                 },
                                 _ => {

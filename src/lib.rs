@@ -19,6 +19,21 @@ impl fmt::Display for WebUIFileVersion {
     }
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct WebUIShow {
+    pub show_uid: i32,
+    pub show_title: String,
+    pub episode_count: usize,
+}
+
+impl fmt::Display for WebUIShow {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "show_uid: {}, show_title: {}, episode_count: {}", self.show_uid, self.show_title, self.episode_count)
+    }
+}
+
+
+
 #[derive(Serialize, Deserialize)]
 pub enum MessageSource {
     Worker(WorkerMessage),
@@ -66,6 +81,7 @@ pub enum RequestType {
     AllFileVersions,
     AllProfiles,
     AllGenerics,
+    AllShows,
     FileVersions(usize, usize), //specified range, this will be used for indexing the server's storage structure
     Generics(usize, usize), //specified range, this will be used for indexing the server's storage structure
 }
@@ -77,6 +93,7 @@ pub enum WebUIMessage {
     //EncodeGeneric(i32, i32, AddEncodeMode, EncodeProfile),
     
     //Server -> WebUI
+    Shows(Vec<WebUIShow>),
     Encode(i32, i32),
     FileVersion(i32, i32, String),
     FileVersions(Vec<WebUIFileVersion>),
