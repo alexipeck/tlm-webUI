@@ -330,6 +330,7 @@ impl Component for Model {
                             <td class={classes!("clickable", "navbar_element", "navbar_table")}><a class={classes!("navbar_button")} onclick=self.link.callback(|_| Msg::Process)>{ "Process" }</a></td>
                             <td class={classes!("clickable", "navbar_element", "navbar_table")}><a class={classes!("navbar_button")} onclick=self.link.callback(|_| Msg::Hash)>{ "Hash" }</a></td>
                             <td class={classes!("clickable", "navbar_element", "navbar_table")}><a class={classes!("navbar_button")} onclick=self.link.callback(|_| Msg::Request(RequestType::AllFileVersions))>{ "RequestFileVersions" }</a></td>
+                            <td class={classes!("clickable", "navbar_element", "navbar_table")}><a class={classes!("navbar_button")} onclick=self.link.callback(|_| Msg::Request(RequestType::AllShows))>{ "RequestShows" }</a></td>
                             <td class={classes!("clickable", "navbar_element", "navbar_table")}><a class={classes!("navbar_button")} onclick=self.link.callback(|_| Msg::Test("test".to_string()))>{ "Test" }</a></td>
                             {
                                 if self.ws.is_none() {
@@ -391,6 +392,20 @@ impl Component for Model {
                                     //self.rows.iter().collect::<Html>()
                                 }
                                 
+                                {
+                                    self.data.shows.clone().into_iter().map(|row| {
+                                        let show_uid = row.show_uid.clone();
+                                        let show_title = row.show_title.clone();
+                                        let episode_count = row.episode_count.clone();
+                                        html!{
+                                            <div class={classes!("details_row")}>
+                                                <th class={classes!("row_portion")}><a>{ format!("{}", show_uid) }</a></th>
+                                                <th class={classes!("row_portion")}><a>{ format!("{}", show_title) }</a></th>
+                                                <th class={classes!("row_portion")}><a>{ format!("{}", episode_count) }</a></th>
+                                            </div>
+                                        }
+                                    }).collect::<Html>()
+                                }
                             </table>
                         </div>
                     </body>
