@@ -377,8 +377,6 @@ impl Component for Model {
                                         html!{
                                             <div class={classes!("details_row")}>
                                                 <th class={classes!("row_portion")}><a>{ format!("{}", file_name) }</a></th>
-                                                <th class={classes!("row_portion")}><a>{ format!("{}", generic_uid) }</a></th>
-                                                <th class={classes!("row_portion")}><a>{ format!("{}", id) }</a></th>
                                                 <th class={classes!("row_portion")}><button onclick=self.link.callback( move |_| Msg::Encode(generic_uid, id))>{ "Encode" }</button></th>
                                             </div>
                                         }
@@ -399,7 +397,6 @@ impl Component for Model {
                                         let episode_count = row.episode_count.clone();
                                         html!{
                                             <div class={classes!("details_row")}>
-                                                <th class={classes!("row_portion")}><a>{ format!("{}", show_uid) }</a></th>
                                                 <th class={classes!("row_portion")}><a>{ format!("{}", show_title) }</a></th>
                                                 <th class={classes!("row_portion")}><a>{ format!("{}", episode_count) }</a></th>
                                             </div>
