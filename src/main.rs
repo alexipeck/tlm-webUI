@@ -5,7 +5,7 @@ use tlm_webui::{WebUIFileVersion, WebUIShow};
 use {
     anyhow::Error,
     tlm_webui::{MessageSource, WebUIMessage, RequestType},
-    yew::{prelude::*, services::{Task, websocket::{WebSocketService, WebSocketTask, WebSocketStatus}}},
+    yew::{prelude::*, events::KeyboardEvent, services::{Task, websocket::{WebSocketService, WebSocketTask, WebSocketStatus}}},
     std::panic,
     yew::format::Text,
 };
@@ -77,6 +77,7 @@ struct Model {
     ws: Option<WebSocketTask>,
     data: DataContext,
     current_tab: Tab,
+    loaded_content: bool,
 }
 
 impl Model {
@@ -149,6 +150,41 @@ impl Model {
             }
         }
     }
+
+    fn generate_show_rows(&self) -> Html {
+        self.data.shows.clone().into_iter().map(|row| {
+            let show_uid = row.show_uid.clone();
+            let show_title = row.show_title.clone();
+            let episode_count = row.episode_count.clone();
+            html!{
+                <div class={classes!("details_row")}>
+                    <th class={classes!("row_portion")}><a>{ format!("{}", show_title) }</a></th>
+                    <th class={classes!("row_portion")}><a>{ format!("{}", episode_count) }</a></th>
+                </div>
+            }
+        }).collect::<Html>()
+    }
+
+    fn generate_file_version_rows(&self) -> Html {
+        self.data.file_versions.clone().into_iter().map(|row| {
+            let generic_uid = row.generic_uid.clone();
+            let id = row.id.clone();
+            let file_name = row.file_name.clone();
+            html!{
+                <div class={classes!("details_row")}>
+                    <th class={classes!("row_portion")}><a>{ format!("{}", file_name) }</a></th>
+                    <th class={classes!("row_portion")}><button onclick=self.link.callback( move |_| Msg::Encode(generic_uid, id))>{ "Encode" }</button></th>
+                </div>
+            }
+            //html!{<div class={classes!("details_row")}>{ format!("{}", row) }</div>}
+        }).collect::<Html>()
+
+        //self.rows.iter().to_string()
+        /* for t in self.rows.iter() {
+
+        } */
+        //self.rows.iter().collect::<Html>()
+    }
 }
 
 impl Component for Model {
@@ -163,6 +199,7 @@ impl Component for Model {
             test_value: 0,
             data: DataContext::default(),
             current_tab: Tab::FileVersions,
+            loaded_content: false,
         };
         let cbout = model.link.callback(|data | Msg::Received(data));
         let cbnot = model.link.callback(|input| {
@@ -193,12 +230,13 @@ impl Component for Model {
             self.test_value += 1;
         } */
         
-        match self.current_tab {
+        /* match self.current_tab {
             Tab::FileVersions => {
                 self.link.callback(|_: ()| Msg::Request(RequestType::AllFileVersions));
             },
             Tab::Shows => {},
-        }
+        } */
+
 
         
         match msg {
@@ -332,6 +370,7 @@ impl Component for Model {
                             <td class={classes!("clickable", "navbar_element", "navbar_table")}><a class={classes!("navbar_button")} onclick=self.link.callback(|_| Msg::Request(RequestType::AllFileVersions))>{ "RequestFileVersions" }</a></td>
                             <td class={classes!("clickable", "navbar_element", "navbar_table")}><a class={classes!("navbar_button")} onclick=self.link.callback(|_| Msg::Request(RequestType::AllShows))>{ "RequestShows" }</a></td>
                             <td class={classes!("clickable", "navbar_element", "navbar_table")}><a class={classes!("navbar_button")} onclick=self.link.callback(|_| Msg::Test("test".to_string()))>{ "Test" }</a></td>
+                            //<td class={classes!("clickable", "navbar_element", "navbar_table")}><a class={classes!("navbar_button")} onclick=self.link.callback(|_| Msg::Test("test".to_string()))>{ "Test" }</a></td>
                             {
                                 if self.ws.is_none() {
                                     html!{
@@ -369,40 +408,8 @@ impl Component for Model {
                                 <div class={classes!("details_row")}>
                                     <td><a> { format!("Connected: {}", self.ws.is_some()) }</a></td>
                                 </div>
-                                {
-                                    self.data.file_versions.clone().into_iter().map(|row| {
-                                        let generic_uid = row.generic_uid.clone();
-                                        let id = row.id.clone();
-                                        let file_name = row.file_name.clone();
-                                        html!{
-                                            <div class={classes!("details_row")}>
-                                                <th class={classes!("row_portion")}><a>{ format!("{}", file_name) }</a></th>
-                                                <th class={classes!("row_portion")}><button onclick=self.link.callback( move |_| Msg::Encode(generic_uid, id))>{ "Encode" }</button></th>
-                                            </div>
-                                        }
-                                        //html!{<div class={classes!("details_row")}>{ format!("{}", row) }</div>}
-                                    }).collect::<Html>()
-                        
-                                    //self.rows.iter().to_string()
-                                    /* for t in self.rows.iter() {
-
-                                    } */
-                                    //self.rows.iter().collect::<Html>()
-                                }
-                                
-                                {
-                                    self.data.shows.clone().into_iter().map(|row| {
-                                        let show_uid = row.show_uid.clone();
-                                        let show_title = row.show_title.clone();
-                                        let episode_count = row.episode_count.clone();
-                                        html!{
-                                            <div class={classes!("details_row")}>
-                                                <th class={classes!("row_portion")}><a>{ format!("{}", show_title) }</a></th>
-                                                <th class={classes!("row_portion")}><a>{ format!("{}", episode_count) }</a></th>
-                                            </div>
-                                        }
-                                    }).collect::<Html>()
-                                }
+                                { self.generate_file_version_rows() }
+                                { self.generate_show_rows() }
                             </table>
                         </div>
                     </body>
