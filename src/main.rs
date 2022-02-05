@@ -53,6 +53,7 @@ fn wait_until_web_socket_is_open(structure: &mut Model) {
     }
 }
 
+#[derive(PartialEq)]
 pub enum Tab {
     Shows,
     FileVersions,
@@ -155,34 +156,53 @@ impl Model {
 
     fn generate_show_rows(&self) -> Html {
         //self.link.callback(|_: ()| Msg::Request(RequestType::AllShows));
-        self.data.shows.clone().into_iter().map(|row| {
-            let show_uid = row.show_uid.clone();
-            let show_title = row.show_title.clone();
-            let episode_count = row.episode_count.clone();
-            html!{
+        html! {
+            <table class={classes!("details_table")}>
                 <div class={classes!("details_row")}>
-                    <th class={classes!("row_portion")}><a>{ format!("{}", show_title) }</a></th>
-                    <th class={classes!("row_portion")}><a>{ format!("{}", episode_count) }</a></th>
+                    <th class={classes!("row_portion")}><a>{ "Show Title" }</a></th>
+                    <th class={classes!("row_portion")}><a>{ "Episode Count" }</a></th>
                 </div>
-            }
-        }).collect::<Html>()
+                {
+                    self.data.shows.clone().into_iter().map(|row| {
+                        let show_uid = row.show_uid.clone();
+                        let show_title = row.show_title.clone();
+                        let episode_count = row.episode_count.clone();
+                        html!{
+                            <div class={classes!("details_row")}>
+                                <th class={classes!("row_portion")}><a>{ format!("{}", show_title) }</a></th>
+                                <th class={classes!("row_portion")}><a>{ format!("{}", episode_count) }</a></th>
+                            </div>
+                        }
+                    }).collect::<Html>()
+                }
+            </table>
+        }
     }
 
     fn generate_file_version_rows(&self) -> Html {
         //self.link.callback(|_: ()| Msg::Request(RequestType::AllFileVersions));
-        self.data.file_versions.clone().into_iter().map(|row| {
-            let generic_uid = row.generic_uid.clone();
-            let id = row.id.clone();
-            let file_name = row.file_name.clone();
-            html!{
+        html! {
+            <table class={classes!("details_table")}>
                 <div class={classes!("details_row")}>
-                    <th class={classes!("row_portion")}><a>{ format!("{}", file_name) }</a></th>
-                    <th class={classes!("row_portion")}><button onclick=self.link.callback( move |_| Msg::Encode(generic_uid, id))>{ "Encode" }</button></th>
+                    <th class={classes!("row_portion")}><a>{ "File Name" }</a></th>
+                    <th class={classes!("row_portion")}><a>{ "Encode" }</a></th>
                 </div>
-            }
-            //html!{<div class={classes!("details_row")}>{ format!("{}", row) }</div>}
-        }).collect::<Html>()
-
+                {
+                    self.data.file_versions.clone().into_iter().map(|row| {
+                        let generic_uid = row.generic_uid.clone();
+                        let id = row.id.clone();
+                        let file_name = row.file_name.clone();
+                        html!{
+                            <div class={classes!("details_row")}>
+                                <th class={classes!("row_portion")}><a>{ format!("{}", file_name) }</a></th>
+                                <th class={classes!("row_portion")}><button onclick=self.link.callback( move |_| Msg::Encode(generic_uid, id))>{ "Encode" }</button></th>
+                            </div>
+                        }
+                        //html!{<div class={classes!("details_row")}>{ format!("{}", row) }</div>}
+                    }).collect::<Html>()
+                }
+            </table>
+        }
         //self.rows.iter().to_string()
         /* for t in self.rows.iter() {
 
@@ -219,6 +239,11 @@ impl Component for Model {
     }
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
+        if !self.loaded_content {
+            self.send_request(RequestType::AllFileVersions);
+            self.send_request(RequestType::AllShows);
+            self.loaded_content = true
+        }
         /* if self.ws.is_none() {
             let cbout = self.link.callback(|data | Msg::Received(data));
             let cbnot = self.link.callback(|input| {
@@ -341,8 +366,12 @@ impl Component for Model {
                 true
             },
             Msg::SwitchTab(tab) => {
-                self.current_tab = tab;
-                true
+                if self.current_tab != tab {
+                    self.current_tab = tab;
+                    true
+                } else {
+                    false
+                }
             },
             _ => false,
         }
@@ -369,9 +398,7 @@ impl Component for Model {
                             <td class={classes!("clickable", "navbar_element", "navbar_table")}><a class={classes!("navbar_button")} onclick=self.link.callback(|_| Msg::Import)>{ "Import" }</a></td>
                             <td class={classes!("clickable", "navbar_element", "navbar_table")}><a class={classes!("navbar_button")} onclick=self.link.callback(|_| Msg::Process)>{ "Process" }</a></td>
                             <td class={classes!("clickable", "navbar_element", "navbar_table")}><a class={classes!("navbar_button")} onclick=self.link.callback(|_| Msg::Hash)>{ "Hash" }</a></td>
-                            <td class={classes!("clickable", "navbar_element", "navbar_table")}><a class={classes!("navbar_button")} onclick=self.link.callback(|_| Msg::Request(RequestType::AllFileVersions))>{ "RequestFileVersions" }</a></td>
-                            <td class={classes!("clickable", "navbar_element", "navbar_table")}><a class={classes!("navbar_button")} onclick=self.link.callback(|_| Msg::Request(RequestType::AllShows))>{ "RequestShows" }</a></td>
-                            <td class={classes!("clickable", "navbar_element", "navbar_table")}><a class={classes!("navbar_button")} onclick=self.link.callback(|_| Msg::Test("test".to_string()))>{ "Test" }</a></td>
+                            <td class={classes!("clickable", "navbar_element", "navbar_table")}><a class={classes!("navbar_button")}>{ format!("Connected: {}", self.ws.is_some()) }</a></td>
                             //<td class={classes!("clickable", "navbar_element", "navbar_table")}><a class={classes!("navbar_button")} onclick=self.link.callback(|_| Msg::Test("test".to_string()))>{ "Test" }</a></td>
                             {
                                 if self.ws.is_none() {
@@ -408,21 +435,16 @@ impl Component for Model {
 
                         //Details View
                         <div class={classes!("main")}>
-                            <table class={classes!("details_table")}>
-                                <div class={classes!("details_row")}>
-                                    <td><a> { format!("Connected: {}", self.ws.is_some()) }</a></td>
-                                </div>
-                                {
-                                    match self.current_tab {
-                                        Tab::Shows => {
-                                            self.generate_show_rows()
-                                        },
-                                        Tab::FileVersions => {
-                                            self.generate_file_version_rows()
-                                        },
-                                    }
+                            {
+                                match self.current_tab {
+                                    Tab::Shows => {
+                                        self.generate_show_rows()
+                                    },
+                                    Tab::FileVersions => {
+                                        self.generate_file_version_rows()
+                                    },
                                 }
-                            </table>
+                            }
                         </div>
                     </body>
                 </div>
