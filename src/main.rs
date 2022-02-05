@@ -25,6 +25,8 @@ enum Msg {
     Encode(i32, i32),
 
     Ignore,
+
+    SwitchTab(Tab),
 }
 
 fn wait_until_web_socket_is_open(structure: &mut Model) {
@@ -152,6 +154,7 @@ impl Model {
     }
 
     fn generate_show_rows(&self) -> Html {
+        //self.link.callback(|_: ()| Msg::Request(RequestType::AllShows));
         self.data.shows.clone().into_iter().map(|row| {
             let show_uid = row.show_uid.clone();
             let show_title = row.show_title.clone();
@@ -166,6 +169,7 @@ impl Model {
     }
 
     fn generate_file_version_rows(&self) -> Html {
+        //self.link.callback(|_: ()| Msg::Request(RequestType::AllFileVersions));
         self.data.file_versions.clone().into_iter().map(|row| {
             let generic_uid = row.generic_uid.clone();
             let id = row.id.clone();
@@ -198,7 +202,7 @@ impl Component for Model {
             link,
             test_value: 0,
             data: DataContext::default(),
-            current_tab: Tab::FileVersions,
+            current_tab: Tab::Shows,
             loaded_content: false,
         };
         let cbout = model.link.callback(|data | Msg::Received(data));
@@ -336,13 +340,11 @@ impl Component for Model {
                 self.test_value += 1;
                 true
             },
-            Msg::Test(string) => {
-                self.send_string(string);
+            Msg::SwitchTab(tab) => {
+                self.current_tab = tab;
                 true
             },
-            _ => {
-                false
-            },
+            _ => false,
         }
     }
 
@@ -359,10 +361,10 @@ impl Component for Model {
                     //<img src="TLM Icon.png" width="500" height="500"/>
                     <table>
                         <tr>
-                        //Progress view
-                        //Details view of directories/paths with relevant controls in the control bar.
-                        //Details view of all imported with relevant controls in the control bar.
-                        //Details view of all imported with relevant controls in the control bar.
+                            //Progress view
+                            //Details view of directories/paths with relevant controls in the control bar.
+                            //Details view of all imported with relevant controls in the control bar.
+                            //Details view of all imported with relevant controls in the control bar.
                             <td class={classes!("clickable", "navbar_element", "navbar_table")}><a class={classes!("navbar_button")} onclick=self.link.callback(|_| Msg::AddOne)>{ self.test_value }</a></td>
                             <td class={classes!("clickable", "navbar_element", "navbar_table")}><a class={classes!("navbar_button")} onclick=self.link.callback(|_| Msg::Import)>{ "Import" }</a></td>
                             <td class={classes!("clickable", "navbar_element", "navbar_table")}><a class={classes!("navbar_button")} onclick=self.link.callback(|_| Msg::Process)>{ "Process" }</a></td>
@@ -392,6 +394,8 @@ impl Component for Model {
                                 <tr class={classes!("clickable", "sidebar_element")}><a>{ "Dashboard" }</a></tr>
                                 <tr class={classes!("clickable", "sidebar_element")}><a>{ "Profiles" }</a></tr>
                                 <tr class={classes!("clickable", "sidebar_element")}><a>{ "List" }</a></tr>
+                                <tr class={classes!("clickable", "sidebar_element", "sidebar_element_child")} onclick=self.link.callback(|_| Msg::SwitchTab(Tab::Shows))><a>{ "Shows" }</a></tr>
+                                <tr class={classes!("clickable", "sidebar_element", "sidebar_element_child")} onclick=self.link.callback(|_| Msg::SwitchTab(Tab::FileVersions))><a>{ "FileVersions" }</a></tr>
                                 <tr class={classes!("clickable", "sidebar_element", "sidebar_element_child")}><a>{ "Organise" }</a></tr>
                                 <tr class={classes!("clickable", "sidebar_element", "sidebar_element_child")}><a>{ "Process" }</a></tr>
                             </table>
@@ -408,8 +412,16 @@ impl Component for Model {
                                 <div class={classes!("details_row")}>
                                     <td><a> { format!("Connected: {}", self.ws.is_some()) }</a></td>
                                 </div>
-                                { self.generate_file_version_rows() }
-                                { self.generate_show_rows() }
+                                {
+                                    match self.current_tab {
+                                        Tab::Shows => {
+                                            self.generate_show_rows()
+                                        },
+                                        Tab::FileVersions => {
+                                            self.generate_file_version_rows()
+                                        },
+                                    }
+                                }
                             </table>
                         </div>
                     </body>
