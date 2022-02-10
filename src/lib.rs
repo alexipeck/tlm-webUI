@@ -95,7 +95,7 @@ pub enum WebUIMessage {
     //Server -> WebUI
     Shows(Vec<WebUIShow>),
     Encode(i32, i32),
-    FileVersion(i32, i32, String),
+    FileVersion(WebUIFileVersion),
     FileVersions(Vec<WebUIFileVersion>),
     Generic(i32, i32, String),
     //Generics(Vec<WebUIGeneric>),

@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::{collections::HashSet, time::{Instant, Duration}};
 
 use tlm_webui::{WebUIFileVersion, WebUIShow};
 
@@ -9,6 +9,8 @@ use {
     std::panic,
     yew::format::Text,
 };
+
+pub const data_update_timeout: u128 = 10;
 
 enum Msg {
     AddOne,
@@ -81,6 +83,7 @@ struct Model {
     data: DataContext,
     current_tab: Tab,
     loaded_content: bool,
+    last_update: Instant,
 }
 
 impl Model {
@@ -222,8 +225,9 @@ impl Component for Model {
             link,
             test_value: 0,
             data: DataContext::default(),
-            current_tab: Tab::Shows,
+            current_tab: Tab::FileVersions,//Tab::Shows
             loaded_content: false,
+            last_update: Instant::now(),
         };
         let cbout = model.link.callback(|data | Msg::Received(data));
         let cbnot = model.link.callback(|input| {
@@ -297,11 +301,14 @@ impl Component for Model {
                     match raw_message_source {
                         Ok(message_source) => {
                             match message_source {
-                                MessageSource::WebUI(WebUIMessage::FileVersions(file_versions)) => {
+                                MessageSource::WebUI(WebUIMessage::FileVersion(file_version)) => {
+                                    self.add_file_version_to_context(&file_version);
+                                }
+                                /* MessageSource::WebUI(WebUIMessage::FileVersions(file_versions)) => {
                                     for file_version in file_versions.iter() {
                                         self.add_file_version_to_context(file_version);
                                     }
-                                },
+                                }, */
                                 MessageSource::WebUI(WebUIMessage::Shows(shows)) => {
                                     for show in shows.iter() {
                                         self.add_shows_to_context(show);
@@ -321,7 +328,10 @@ impl Component for Model {
                 } else {
                 }
                 self.test_value += 1;
-				true    
+                if self.last_update.elapsed().as_millis() > data_update_timeout {
+                    return true;
+                }
+				false  
 			}
 			Msg::Received(Err(err)) => {
                 self.test_value += 1;
